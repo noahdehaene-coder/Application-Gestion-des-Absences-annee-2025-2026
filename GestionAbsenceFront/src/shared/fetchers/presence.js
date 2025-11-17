@@ -30,12 +30,19 @@ export async function getStudentsAbsenceByCourse(courseId) {
     try {
         const response = await fetch(`http://localhost:3000/student/presence/course/${courseId}`, {
             method: 'GET',
-            headers: getAuthHeader() // Sécurisé
+            headers: getAuthHeader()
         });
+
+        if (!response.ok) {
+            console.error(`Erreur HTTP ${response.status} lors de la récupération des absences pour la matière ${courseId}`);
+            return [];
+        }
+
         const data = await response.json();
         return data;
     } catch (error) {
         console.error("Erreur lors de la récupération des absences : ", error);
+        return [];
     }
 }
 
@@ -51,12 +58,19 @@ export async function getStudentAbsencesById(id) {
     try {
         const response = await fetch(`http://localhost:3000/course_material/presence/student/${id}`, {
             method: 'GET',
-            headers: getAuthHeader() // Sécurisé
+            headers: getAuthHeader()
         });
+
+        if (!response.ok) {
+            console.error(`Erreur HTTP ${response.status} lors de la récupération des absences pour l'étudiant ${id}`);
+            return [];
+        }
+
         const data = await response.json();
         return data;
     } catch (error) {
         console.error("Erreur lors de la récupération des absences : ", error);
+        return [];
     }
 }
 

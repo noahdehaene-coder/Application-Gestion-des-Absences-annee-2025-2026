@@ -144,24 +144,52 @@ export class StudentService {
   }
 
   async getByCourseWithPresence(courseId: number) {
-    const absences = await this.prisma.presence.findMany({
-      where: {
-        presence_slot: {
+  const absences = await this.prisma.presence.findMany({
+    where: {
+      presence_slot: {
+        slot_session_type: {
+          course_material_id: courseId,
+        },
+      },
+    },
+    include: {
+      presence_student: {
+        select: {
+          name: true,
+          student_number: true,
+        },
+      },
+      presence_slot: {
+        select: {
+          date: true,
           slot_session_type: {
-            course_material_id: courseId,
+            select: {
+              sessionTypeGlobal: {
+                select: { name: true },
+              },
+              session_type_course_material: {
+                select: {
+                  name: true,
+                },
+              },
+            },
           },
         },
       },
-      include: {
-        presence_student: true,
-        presence_slot: true,
-      },
-    });
-    return absences.map((presence) => ({
-      student: presence.presence_student,
-      date: presence.presence_slot.date,
-    }));
-  }
+    },
+  });
+
+  const simplified = absences.map((a) => ({
+    name: a.presence_student.name,
+    student_number: a.presence_student.student_number,
+    date: a.presence_slot.date,
+    session_type: a.presence_slot.slot_session_type.sessionTypeGlobal.name,
+    course_material:
+      a.presence_slot.slot_session_type.session_type_course_material.name,
+  }));
+  
+  return simplified;
+}
 
   async getAll(): Promise<student[]> {
     return this.prisma.student.findMany();

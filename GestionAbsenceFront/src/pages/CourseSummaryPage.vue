@@ -1,33 +1,51 @@
 <template>
-  <main class="left">
+  <main class="left" v-if="courseName !== 'Chargement...'">
     <div class="header">
-      <h1>Récapitulatif des absences en {{ courseName }} ({{ sessionType }})</h1>
+      <h1>Récapitulatif des absences en {{ courseName }}</h1>
     </div>
 
-    <div class="search-container">
-      <SearchIcon class="search-icon" />
-      <input type="search" v-model="searchQuery" placeholder="Rechercher un.e étudiant.e" class="search-bar" />
-    </div>
+    <div class="filters-container">
+      
+      <div class="search-container">
+        <SearchIcon class="search-icon" />
+        <input type="search" v-model="searchQuery" placeholder="Rechercher un.e étudiant.e" class="search-bar" />
+      </div>
 
+      <div class="session-type-filter">
+        <label>Filtrer par type de session :</label>
+        <div class="session-type-options">
+          <label v-for="type in uniqueSessionTypes" :key="type" class="checkbox-label">
+            <input type="checkbox" :value="type" v-model="selectedSessionTypes">
+            {{ type }}
+          </label>
+        </div>
+      </div>
+    </div>
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>Date</th>
             <th>Étudiant.e</th>
+            <th>Type de Session</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="absence in filteredAbsences" :key="absence.id">
             <td>{{ formatDate(absence.date) }}</td>
             <td>{{ absence.name }}</td>
+            <td>{{ absence.session_type }}</td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
-            <td colspan="2" class="no-absences">Aucune absence trouvée pour cette matière.</td>
+            <td colspan="3" class="no-absences">Aucune absence trouvée pour cette matière.</td>
           </tr>
         </tbody>
       </table>
     </div>
+  </main>
+  
+  <main class="left" v-else>
+      <h1>Chargement des récapitulatifs...</h1>
   </main>
 </template>
 
@@ -36,21 +54,29 @@ import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
-// Importe les fonctions (maintenant corrigées)
 import { getStudentsByCourseId } from '@/shared/fetchers/students';
 import { getAbsenceByCourse } from '@/shared/fetchers/presence';
 
 const route = useRoute();
 const courseId = Number(route.params.id); 
-const courseName = ref("Chargement..."); 
-const sessionType = ref(""); 
+const courseName = ref("Chargement...");
 
-// --- CORRECTION : Initialisation avec [] au lieu de null ---
+const selectedSessionTypes = ref([]);
+
 const absencesList = ref([]);
 const studentsList = ref([]);
-// --- FIN CORRECTION ---
 
 const searchQuery = ref("");
+
+const uniqueSessionTypes = computed(() => {
+  const types = new Set();
+  absencesList.value.forEach(absence => {
+    if (absence.session_type) { 
+      types.add(absence.session_type);
+    }
+  });
+  return Array.from(types);
+});
 
 onMounted(async () => {
   if (isNaN(courseId)) {
@@ -58,29 +84,34 @@ onMounted(async () => {
     return;
   }
   
-  // Appelle les API avec l'ID corrigé
   absencesList.value = await getAbsenceByCourse(courseId) || [];
   studentsList.value = await getStudentsByCourseId(courseId) || [];
 
-  // Met à jour les noms pour l'affichage (si les listes ne sont pas vides)
   if (absencesList.value.length > 0) {
     courseName.value = absencesList.value[0].course_material;
-    sessionType.value = absencesList.value[0].session_type;
   } else if (studentsList.value.length > 0) {
-    // Logique de repli (vous devrez peut-être ajuster le fetcher)
-    // courseName.value = studentsList.value[0].course_name; 
+
   } else {
     courseName.value = "Inconnue";
   }
 });
 
-// Filtre pour la recherche (maintenant sûr)
-const filteredAbsences = computed(() =>
-  absencesList.value.filter(absence =>
-    // CORRECTION : Ajout d'une vérification (au cas où)
-    absence && absence.name && absence.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-);
+
+const filteredAbsences = computed(() => {
+  
+  const typeFilterActive = selectedSessionTypes.value.length > 0; 
+  
+  return absencesList.value.filter(absence => {
+    
+    const matchesName = absence && absence.name && absence.name.toLowerCase().includes(searchQuery.value.toLowerCase());
+    
+    const matchesType = 
+        !typeFilterActive 
+        || selectedSessionTypes.value.includes(absence.session_type);
+    
+    return matchesName && matchesType;
+  });
+});
 
 // Formate la date
 function formatDate(dateString) {

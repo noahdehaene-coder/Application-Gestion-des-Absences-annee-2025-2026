@@ -1,11 +1,10 @@
 <!--Page de sélection des absences pour un créneau-->
 <template>
     <main class="left">
-        <h1>Appel pour {{ sessionType }} {{ courseName }}</h1>
-        <!-- Pour diviser en 2 sections lorsqu'on affiche les étudiants extérieurs
-        <div class="sections-container">-->
+        <h1>Appel pour {{ sessionTypeName }} {{ courseName }}</h1>
+        
 
-        <div> <!-- Ajouter class="section" si on utilise les 2 sections-->
+        <div>
             <h2>{{ groupName }}</h2>
             <div class="search-container">
                 <SearchIcon class="search-icon" />
@@ -60,24 +59,22 @@ import { useRouter, useRoute } from 'vue-router';
 import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
 import { getStudentsByGroupId } from '@/shared/fetchers/students';
 import { postAbsence } from '@/shared/fetchers/presence';
-import { postSlot } from '@/shared/fetchers/slots'; // postSlot enverra l'ID
+import { postSlot } from '@/shared/fetchers/slots';
 
 const studentsInGroup = ref([]); 
 const searchQuery = ref("");
 
 const route = useRoute();
-// Récupérer les nouveaux paramètres de la route
 const groupName = route.params.groupName;
 const groupId = Number(route.params.groupId);
-const sessionTypeName = route.params.sessionTypeName; // Pour l'affichage (ex: "TD")
-const sessionTypeGlobalId = Number(route.params.sessionTypeGlobalId); // Pour le backend (ex: 2)
+const sessionTypeName = route.params.sessionTypeName;
+const sessionTypeGlobalId = Number(route.params.sessionTypeGlobalId);
 const courseName = route.params.courseName;
 const date = route.params.date;
 const slot = ref(null);
 
 onMounted(async () => {
     studentsInGroup.value = await getStudentsByGroupId(groupId);
-    // Appelle postSlot avec l'ID (numéro), pas le nom
     slot.value = await postSlot(groupId, courseName, sessionTypeGlobalId, date);
 });
 
@@ -122,7 +119,7 @@ const router = useRouter();
 
 async function saveCallAndGoBack() {
     await saveCall();
-    router.go(-1); // Revenir à la page précédente
+    router.go(-1);
 }
 </script>
 

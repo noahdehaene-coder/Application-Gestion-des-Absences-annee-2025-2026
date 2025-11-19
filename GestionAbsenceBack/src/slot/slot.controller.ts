@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, Req} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, Req, BadRequestException} from '@nestjs/common';
 import { SlotService } from './slot.service';
 import { CreateSlotDto } from './dto/create-slot-by-session.dto';
 import { CreateSlotBySessionDto } from './dto/create-slot.dto';
@@ -12,6 +12,16 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class SlotController {
   constructor(private readonly slotService: SlotService) {}
+
+  @Get('recent-calls')
+  @ApiOperation({ summary: 'Récupérer les modèles d\'appels récents pour le professeur connecté' })
+  async getRecentCalls(@Req() req: any) {
+    const professorId = Number(req.user?.id); 
+    if (isNaN(professorId) || professorId <= 0) { 
+        throw new BadRequestException('Professor ID is missing or invalid in the token payload.');
+    }
+    return this.slotService.getRecentCalls(professorId);
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un créneau par son ID' })
@@ -50,13 +60,6 @@ export class SlotController {
   async postBySession(@Body() createSlotBySessionDto: CreateSlotBySessionDto, @Req() req: any,) {
     const professorId = req.user.id;
     return this.slotService.postBySessionName(createSlotBySessionDto, professorId);
-  }
-
-  @Get('recent-calls')
-  @ApiOperation({ summary: 'Récupérer les modèles d\'appels récents pour le professeur connecté' })
-  async getRecentCalls(@Req() req: any) {
-    const professorId = req.user.id;
-    return this.slotService.getRecentCalls(professorId);
   }
 
   @Put(':id')

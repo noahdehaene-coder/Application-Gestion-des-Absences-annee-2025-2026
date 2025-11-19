@@ -39,7 +39,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-// Importe la nouvelle fonction de votre fetcher de 'slots'
 import { fetchRecentCalls } from '../shared/fetchers/slots';
 
 const router = useRouter();
@@ -65,21 +64,20 @@ function goToCreateCall() {
 
 /**
  * Démarre un appel basé sur un modèle récent, en utilisant la date du jour.
- * @param {object} callTemplate - Le modèle d'appel (groupe, matière, etc.)
+ * @param {object} callTemplate - Le modèle d'appel (doit contenir sessionType et sessionTypeGlobalId)
  */
 function startRecentCall(callTemplate) {
-  // Le backend s'attend à un format de date ISO string
   const today = new Date().toISOString(); 
   
-  // Navigue vers la page d'appel existante avec les paramètres pré-remplis
   router.push({
-    name: 'CallPage', // La route vers CallPage.vue
+    name: 'CallPage', 
     params: {
       groupId: callTemplate.groupId,
       groupName: callTemplate.groupName,
       courseName: callTemplate.courseName,
-      sessionType: callTemplate.sessionType,
-      date: today // Le paramètre important : la date
+      sessionTypeName: callTemplate.sessionType, 
+      sessionTypeGlobalId: callTemplate.sessionTypeGlobalId, 
+      date: today
     }
   });
 }

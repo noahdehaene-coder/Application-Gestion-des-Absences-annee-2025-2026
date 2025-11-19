@@ -52,7 +52,6 @@ export class SlotService {
     });
   }
 
-  // Fonction 'postBySessionName' (inchangée)
   async postBySessionName(data: CreateSlotBySessionDto, professorId: number) {
     const { groupId, courseName, sessionTypeGlobalId, date } = data; 
 
@@ -104,7 +103,6 @@ export class SlotService {
       },
     });
 
-    // Utilise 'upsert' pour éviter l'erreur de contrainte unique
     return this.prisma.slot.upsert({
       where: {
         date_session_type_id_group_id_professorId: {
@@ -130,19 +128,20 @@ export class SlotService {
     });
   }
 
-  // MODIFIÉ : Ajout du 'include'
   async getRecentCalls(professorId: number) {
     const recentSlots = await this.prisma.slot.findMany({
       where: { professorId: professorId },
       orderBy: { date: 'desc' },
       take: 20, 
-      // +++++++++++++ CORRECTION : 'include' AJOUTÉ +++++++++++++
       include: {
         slot_group: { select: { name: true } },
         slot_session_type: {
           select: {
-            sessionTypeGlobal: { // Utilise la nouvelle structure
-              select: { name: true }
+            sessionTypeGlobal: { 
+              select: { 
+                name: true,
+                id: true,
+              }
             },
             session_type_course_material: { 
               select: { name: true } 
@@ -150,17 +149,16 @@ export class SlotService {
           },
         },
       },
-      // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     });
 
     const uniqueTemplates = new Map();
     for (const slot of recentSlots) {
-      // Cette vérification est maintenant correcte grâce à 'include'
       if (!slot.slot_group || !slot.slot_session_type || !slot.slot_session_type.session_type_course_material || !slot.slot_session_type.sessionTypeGlobal) {
         continue; 
       }
       const courseName = slot.slot_session_type.session_type_course_material.name;
       const sessionType = slot.slot_session_type.sessionTypeGlobal.name;
+      const sessionTypeGlobalId = slot.slot_session_type.sessionTypeGlobal.id;
       const groupId = slot.group_id;
       const groupName = slot.slot_group.name;
       const key = `${groupId}-${courseName}-${sessionType}`;
@@ -172,6 +170,7 @@ export class SlotService {
           groupName: groupName,
           courseName: courseName,
           sessionType: sessionType,
+          sessionTypeGlobalId: sessionTypeGlobalId,
           displayText: `${courseName} (${sessionType}) - ${groupName}`,
         });
       }
@@ -179,7 +178,6 @@ export class SlotService {
     return Array.from(uniqueTemplates.values());
   }
 
-  // Autres fonctions (put, delete, etc. inchangées)
   async post(data: CreateSlotDto): Promise<SlotModel> {
     throw new Error('La méthode "post" est obsolète. Utilisez "postBySessionName".');
   }

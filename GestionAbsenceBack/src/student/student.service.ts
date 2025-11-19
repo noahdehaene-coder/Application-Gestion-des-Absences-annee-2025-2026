@@ -25,6 +25,7 @@ export class StudentService {
   }
 
   async getByOtherGroups(groupId: number) {
+    // 1. Récupérer le groupe de base et son semestre
     const baseGroup = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: { group_semester: true },
@@ -32,22 +33,26 @@ export class StudentService {
     if (!baseGroup) {
       throw new Error('Groupe non trouvé');
     }
+
+    const semesterId = baseGroup.group_semester.id;
+
+    // 2. Logique existante : Trouver les étudiants dans les autres groupes du semestre
     const otherGroups = await this.prisma.group.findMany({
       where: {
-        semester_id: baseGroup.group_semester.id,
+        semester_id: semesterId,
         name: {
           not: baseGroup.name,
         },
       },
     });
+
     const similarGroupsIds = otherGroups
       .filter((group) => this.isOneCharDifferent(baseGroup.name, group.name))
       .map((group) => group.id);
 
-    let studentsInGroups: any[] = [];
-    
+    let studentsInOtherGroups: any[] = [];
+
     if (similarGroupsIds.length > 0) {
-      // Cas 1 : On a trouvé des groupes similaires (ex: TD1 vs TD2)
       const inscriptions = await this.prisma.inscription.findMany({
         where: {
           group_id: { in: similarGroupsIds },
@@ -58,56 +63,53 @@ export class StudentService {
         },
       });
 
-      // +++ CORRECTION ICI +++
-      // On transforme la liste d'inscriptions en liste d'étudiants
-      // On ajoute aussi les infos du groupe d'origine car le frontend (GroupModification.vue) les utilise
-      studentsInGroups = inscriptions.map((i) => ({
+      studentsInOtherGroups = inscriptions.map((i) => ({
         ...i.inscription_student,
         originalGroupId: i.inscription_group.id,
-        originalGroupName: i.inscription_group.name
+        originalGroupName: i.inscription_group.name,
       }));
-      
     } else {
-      // Cas 2 : Pas de groupe similaire, on cherche dans tout le semestre
-      const baseGorupStudents = await this.prisma.inscription.findMany({
-        where: { group_id: baseGroup.id },
-        include: {
-          inscription_student: true,
-        },
-      });
-      const baseGroupStudentIds = baseGorupStudents.map(
-        (inscription) => inscription.inscription_student.id,
-      );
-      const semesterStudents = await this.prisma.inscription.findMany({
+      const allSemesterInscriptions = await this.prisma.inscription.findMany({
         where: {
           group_id: { not: baseGroup.id },
           inscription_group: {
-            semester_id: baseGroup.group_semester.id,
+            semester_id: semesterId,
           },
         },
         include: {
           inscription_student: true,
+          inscription_group: true,
         },
       });
-      const filteredStudents = semesterStudents.filter((inscription) => {
-        return !baseGroupStudentIds.includes(
-          inscription.inscription_student.id,
-        );
-      });
 
-      const uniqueStudentMap = new Map();
-      for (const inscription of filteredStudents) {
-        uniqueStudentMap.set(
-          inscription.inscription_student.id,
-          inscription.inscription_student,
-        );
+      const uniqueMap = new Map();
+      for (const i of allSemesterInscriptions) {
+        if (!uniqueMap.has(i.inscription_student.id)) {
+          uniqueMap.set(i.inscription_student.id, {
+             ...i.inscription_student,
+             originalGroupId: i.inscription_group.id,
+             originalGroupName: i.inscription_group.name,
+          });
+        }
       }
-      studentsInGroups = Array.from(uniqueStudentMap.values());
+      studentsInOtherGroups = Array.from(uniqueMap.values());
     }
-    return studentsInGroups;
+
+    const studentsWithoutGroup = await this.prisma.student.findMany({
+      where: {
+        student_inscription: {
+          none: {
+            inscription_group: {
+              semester_id: semesterId,
+            },
+          },
+        },
+      },
+    });
+
+    return [...studentsInOtherGroups, ...studentsWithoutGroup];
   }
 
-  //Function pour trouvé les groupe avec des noms similaire (TD1, TD2, TD3)
   private isOneCharDifferent(s1: string, s2: string) {
     if (s1.length === s2.length) {
       let diff = 0;

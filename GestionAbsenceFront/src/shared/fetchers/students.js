@@ -98,21 +98,28 @@ export const getStudentsBySemesterCourse = getStudentsByCourseId;
 /**
  * Ajoute une liste d'étudiant.e.s (CSV) pour un semestre donné.
  */
-export async function postStudents(students, semesterId) {
+export async function postStudents(file) {
     try {
-        const response = await fetch(`http://localhost:3000/student/many/${semesterId}`, {
+        const formData = new FormData();
+        formData.append('fileStudent', file); 
+
+        const token = localStorage.getItem('token');
+
+        const response = await fetch("http://localhost:3000/csv/upload/student", {
             method: "POST",
-            headers: getAuthHeader(),
-            body: JSON.stringify(
-                students
-            )
-        })
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
         if (!response.ok) {
-            throw new Error("Erreur lors de l'envoi des étudiant.e.s");
+            throw new Error("Erreur lors de l'envoi du fichier étudiant.e.s");
         }
         return await response.json();
     } catch (error) {
         console.error("Erreur lors de l'envoi des étudiant.e.s :", error);
+        throw error;
     }
 }
 export const postStudentsCSV = postStudents; // ALIAS

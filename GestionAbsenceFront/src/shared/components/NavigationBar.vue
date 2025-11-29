@@ -9,7 +9,8 @@
       <RouterLink to="/recapitulatifs" class="summary-navigation">Voir le récapitulatif des absences</RouterLink>
       <RouterLink to="/selection/etudiant" class="modification-navigation">Modifier étudiant.e</RouterLink>
       <RouterLink to="/selection/groupe" class="modification-navigation">Modifier groupe</RouterLink>
-      <RouterLink :to="{ name: 'StudentsManagement' }" class="students-management">Gestion des étudiant.e.s</RouterLink>
+      
+      <button @click="handleTitleClick" class="button logout-button">Déconnexion</button>
     </div>
 
     <div class="navigation-router-link" v-else-if="isAuthenticated">
@@ -40,7 +41,6 @@ function handleTitleClick() {
   if (isAuthenticated.value) { 
     auth.logout();
   }
-  // Dans tous les cas, redirige vers la page de connexion
   router.push({ name: 'Login' });
 }
 </script>
@@ -75,16 +75,15 @@ function handleTitleClick() {
 .navigation-router-link {
   display: flex;
   gap: 0.7rem;
+  align-items: stretch;
 }
 
-/* Style pour les RouterLink */
-
-/* Style pour le RouterLink Recap et Modif*/
+/* Style commun pour TOUS les boutons (liens et button) */
 .summary-navigation,
 .modification-navigation,
 .students-management,
 .drop-down-btn,
-.logout-button { /* Ajout du style pour le nouveau bouton */
+.logout-button {
   text-decoration: none;
   color: black;
   border: none;
@@ -92,7 +91,15 @@ function handleTitleClick() {
   border-radius: 5px;
   cursor: pointer;
   font-size: 1rem;
-  font-family: inherit; /* S'assure que le bouton utilise la même police */
+  font-family: inherit;
+  
+  display: flex;         
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box; 
+  min-width: 140px;        
+  text-align: center;      
+  line-height: 1.2;        
 }
 
 .summary-navigation,
@@ -102,12 +109,11 @@ function handleTitleClick() {
 
 .modification-navigation,
 .students-management,
-.logout-button { /* Ajout du style pour le nouveau bouton */
+.logout-button {
   background-color: var(--color-4);
 }
 
-/* Effet au survol des RouterLink */
-
+/* Effet au survol */
 .title-navigation-bar:hover {
   color: var(--color-4);
 }
@@ -116,7 +122,7 @@ function handleTitleClick() {
 .modification-navigation:hover,
 .students-management:hover,
 .drop-down-btn:hover,
-.logout-button:hover { /* Ajout du style pour le nouveau bouton */
+.logout-button:hover {
   background-color: var(--color-5);
 }
 </style>

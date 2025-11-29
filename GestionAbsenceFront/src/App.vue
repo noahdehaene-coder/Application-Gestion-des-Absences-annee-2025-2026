@@ -27,16 +27,22 @@ const breadcrumbSteps = computed(() => {
         { label: 'Accueil', to: null }
       ]
 
+    case 'CreateCallPage':
+      return [
+        { label: 'Accueil', to: '/' },
+        { label: 'Création d\'un appel', to: null }
+      ]  
+
     case 'SelectGroupCall':
       return [
         { label: 'Accueil', to: '/' },
         { label: 'Groupe du créneau', to: null }
       ]
 
-    case 'Call':
+    case 'CallPage':
       return [
         { label: 'Accueil', to: '/' },
-        { label: 'Groupe du créneau', to: `/${route.params.sessionType}/${route.params.courseName}/${route.params.date}/groupe` },
+        { label: 'Création d\'un appel', to: '/call/new' },
         { label: 'Appel', to: null }
       ]
 
@@ -86,13 +92,12 @@ const breadcrumbSteps = computed(() => {
         { label: 'Modification d’un groupe', to: null }
       ]
 
-    /* Pour le bouton 1 du menu déroulant non utilisé
-    case 'CoursesManagement':
+    case 'ManageProfessors':
       return [
         { label: 'Accueil', to: '/' },
-        { label: 'Gestion des données des cours', to: null }
-      ]
-    */
+        { label: 'Gestion des professeurs', to: null }
+      ]  
+
     case 'StudentsManagement':
       return [
         { label: 'Accueil', to: '/' },
@@ -106,11 +111,10 @@ const breadcrumbSteps = computed(() => {
 </script>
 
 <style>
-/* Style pour centrer le contenu de toutes les pages */
 .main-layout-container {
-  max-width: 1200px; /* Largeur maximale pour éviter l'étirement sur grands écrans */
-  margin: 0 auto;    /* Centre le bloc horizontalement */
-  padding: 0 2rem;   /* Ajoute un peu d'espace sur les côtés */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
   box-sizing: border-box;
 }
 </style>

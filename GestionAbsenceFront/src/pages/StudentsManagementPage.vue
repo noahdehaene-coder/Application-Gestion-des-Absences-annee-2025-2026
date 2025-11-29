@@ -89,16 +89,35 @@ function fileChange(event, semester) {
 }
 
 async function submitStudents() {
-    const fichier = uploadedFiles[selectedSemesterForStudents.value];
+    const semester = selectedSemesterForStudents.value;
+    const fichier = uploadedFiles[semester];
+
     if (!fichier) {
         alert("Veuillez sélectionner un fichier CSV.");
         return;
     }
-    await postStudentsCSV(fichier);
-    alert("Fichier envoyé avec succès.");
 
-    studentFileInput.value.value = '';
-    uploadedFiles[selectedSemesterForStudents.value] = null;
+    try {
+        await postStudentsCSV(fichier);
+
+        const semesterNumber = parseInt(semester.replace('S', ''), 10);
+        const year = Math.ceil(semesterNumber / 2); 
+        const groupName = `L${year}${semester}`;
+
+        const newGroup = await postGroupWithSemesterName(semester, groupName);
+        console.log(`Groupe ${groupName} créé avec l'ID : ${newGroup.id}`);
+
+        await postInscriptionsCSV(newGroup.id, fichier);
+
+        alert(`Succès ! Les étudiants ont été importés et le groupe "${groupName}" a été créé avec ses inscrits.`);
+
+        studentFileInput.value.value = '';
+        uploadedFiles[selectedSemesterForStudents.value] = null;
+
+    } catch (error) {
+        console.error("Erreur lors de l'importation complète : ", error);
+        alert("Une erreur est survenue. Vérifiez si le groupe n'existe pas déjà ou si le fichier est valide.");
+    }
 }
 
 const groupName = ref('');

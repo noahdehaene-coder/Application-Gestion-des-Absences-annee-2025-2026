@@ -199,8 +199,10 @@ export class StudentService {
     student_number: a.presence_student.student_number,
     date: a.presence_slot.date,
     session_type: a.presence_slot.slot_session_type.sessionTypeGlobal.name,
-    course_material:
-      a.presence_slot.slot_session_type.session_type_course_material.name,
+    course_material: a.presence_slot.slot_session_type.session_type_course_material.name,
+    justified: a.justified,
+    student_id: a.student_id,
+    slot_id: a.slot_id,
   }));
   
   return simplified;

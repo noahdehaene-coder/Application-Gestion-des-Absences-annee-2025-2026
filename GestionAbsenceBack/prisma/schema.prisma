@@ -89,6 +89,7 @@ model SessionTypeGlobal {
 model presence {
   student_id     Int
   slot_id        Int
+  justified      Boolean @default(false)
   presence_student student @relation(fields: [student_id], references: [id], onDelete: Cascade)
   presence_slot    slot    @relation(fields: [slot_id], references: [id], onDelete: Cascade)
 

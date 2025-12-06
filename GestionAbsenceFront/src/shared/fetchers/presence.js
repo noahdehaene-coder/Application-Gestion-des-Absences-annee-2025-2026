@@ -46,10 +46,9 @@ export async function getStudentsAbsenceByCourse(courseId) {
     }
 }
 
-// +++ AJOUT DE L'ALIAS POUR L'ANCIENNE PAGE +++
-// Exporte la même fonction sous l'ancien nom 'getAbsenceByCourse'
+
 export const getAbsenceByCourse = getStudentsAbsenceByCourse;
-// ++++++++++++++++++++++++++++++++++++++++++++++
+
 
 /**
  * Récupère toutes les absences d’un.e étudiant.e via son identifiant.
@@ -114,5 +113,25 @@ export async function deletePresences() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des inscriptions:", error);
+    }
+}
+
+export async function updatePresenceJustification(studentId, slotId, isJustified) {
+    try {
+        // Attention à bien récupérer l'URL dynamique si vous avez fait la config production
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        
+        const response = await fetch(`${API_URL}/presence/${studentId}/${slotId}`, {
+            method: 'PUT',
+            headers: getAuthHeader(),
+            body: JSON.stringify({ justified: isJustified })
+        });
+
+        if (!response.ok) {
+            throw new Error("Erreur lors de la mise à jour de la justification");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(error);
     }
 }

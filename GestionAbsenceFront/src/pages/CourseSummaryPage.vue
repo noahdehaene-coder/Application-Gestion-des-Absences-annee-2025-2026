@@ -28,6 +28,7 @@
             <th>Date</th>
             <th>Étudiant.e</th>
             <th>Type de Session</th>
+            <th>Absence</th>
           </tr>
         </thead>
         <tbody>
@@ -35,6 +36,14 @@
             <td>{{ formatDate(absence.date) }}</td>
             <td>{{ absence.name }}</td>
             <td>{{ absence.session_type }}</td>
+            <td 
+              class="justification-cell" 
+              :class="{ 'is-justified': absence.justified, 'is-unjustified': !absence.justified }"
+              @click="toggleJustification(absence)"
+              title="Cliquer pour modifier"
+            >
+              {{ absence.justified ? 'Justifiée' : 'Non justifiée' }}
+            </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
             <td colspan="3" class="no-absences">Aucune absence trouvée pour cette matière.</td>
@@ -56,6 +65,8 @@ import { useRoute } from 'vue-router';
 
 import { getStudentsByCourseId } from '@/shared/fetchers/students';
 import { getAbsenceByCourse } from '@/shared/fetchers/presence';
+
+import { updatePresenceJustification } from '@/shared/fetchers/presence';
 
 const route = useRoute();
 const courseId = Number(route.params.id); 
@@ -96,6 +107,18 @@ onMounted(async () => {
   }
 });
 
+async function toggleJustification(absence) {
+  const newState = !absence.justified;
+  
+  absence.justified = newState;
+
+  try {
+    await updatePresenceJustification(absence.student_id, absence.slot_id, newState);
+  } catch (e) {
+    absence.justified = !newState;
+    alert("Erreur lors de la modification.");
+  }
+}
 
 const filteredAbsences = computed(() => {
   
@@ -165,4 +188,25 @@ tbody tr:nth-child(even) {
   font-style: italic;
   color: var(--color-2, #555);
 }
+
+.justification-cell {
+  cursor: pointer;
+  font-weight: bold;
+  user-select: none; /* Empêche la sélection du texte au double-clic */
+  transition: opacity 0.2s;
+}
+
+.justification-cell:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.is-justified {
+  color: #27ae60; /* Vert */
+}
+
+.is-unjustified {
+  color: #c0392b; /* Rouge */
+}
+
 </style>

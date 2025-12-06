@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe } from '@nestjs/common';
 import { PresenceService } from './presence.service';
 import { CreatePresenceDto } from './dto/create-presence.dto';
 import { Prisma } from '@prisma/client';
@@ -81,5 +81,15 @@ export class PresenceController {
   @ApiResponse({ status: 200, description: 'Toutes les absences ont été supprimées' })
   async deleteMany() {
     return this.presenceService.deleteMany();
+  }
+
+  @Put(':student_id/:slot_id')
+  @ApiOperation({ summary: 'Modifier le statut justifié/non justifié' })
+  async updateJustification(
+    @Param('student_id', ParseIntPipe) student_id: number,
+    @Param('slot_id', ParseIntPipe) slot_id: number,
+    @Body() body: { justified: boolean },
+  ) {
+    return this.presenceService.updateJustification(student_id, slot_id, body.justified);
   }
 }

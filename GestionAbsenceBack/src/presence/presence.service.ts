@@ -89,6 +89,20 @@ export class PresenceService {
     });
   }
 
+  async updateJustification(student_id: number, slot_id: number, justified: boolean) {
+    return this.prisma.presence.update({
+      where: {
+        student_id_slot_id: {
+          student_id,
+          slot_id,
+        },
+      },
+      data: {
+        justified: justified,
+      },
+    });
+  }
+
   async postMany(slotId: number, studentIds: number[]) {
     const data = studentIds.map((studentId) => ({
       student_id: studentId,

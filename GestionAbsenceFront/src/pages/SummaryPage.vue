@@ -107,8 +107,8 @@ function generateCSV(abs, filename) {
   ]);
 
   const csvContent = "data:text/csv;charset=utf-8,"
-    + headers.join(',') + "\n"
-    + rows.map(row => row.join(',')).join("\n");
+    + headers.join(';') + "\n"
+    + rows.map(row => row.join(';')).join("\n");
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");

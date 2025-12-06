@@ -28,6 +28,7 @@
             <th>Date</th>
             <th>Matière</th>
             <th>Type</th>
+            <th>Absence</th>
           </tr>
         </thead>
         <tbody>
@@ -35,6 +36,14 @@
             <td>{{ formatDate(absence.date) }}</td>
             <td>{{ absence.course_material || 'Matière inconnue' }}</td>
             <td>{{ absence.session_type }}</td>
+            <td 
+              class="justification-cell" 
+              :class="{ 'is-justified': absence.justified, 'is-unjustified': !absence.justified }"
+              @click="toggleJustification(absence)"
+              title="Cliquer pour modifier"
+            >
+              {{ absence.justified ? 'Justifiée' : 'Non justifiée' }}
+            </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
             <td colspan="3" class="no-absences">Aucune absence trouvée pour cet.te étudiant.e.</td>
@@ -52,6 +61,8 @@ import { useRoute } from 'vue-router';
 
 import { getStudentById } from '@/shared/fetchers/students';
 import { getStudentAbsencesById } from '@/shared/fetchers/presence';
+
+import { updatePresenceJustification } from '@/shared/fetchers/presence';
 
 const route = useRoute();
 const studentId = Number(route.params.id);
@@ -93,6 +104,19 @@ onMounted(async () => {
     studentName.value = "Erreur";
   }
 });
+
+async function toggleJustification(absence) {
+  const newState = !absence.justified;
+  absence.justified = newState;
+
+  try {
+    const sId = absence.student_id || studentId; 
+    await updatePresenceJustification(sId, absence.slot_id, newState);
+  } catch (e) {
+    absence.justified = !newState;
+    alert("Erreur lors de la modification.");
+  }
+}
 
 const filteredAbsences = computed(() => {
   const typeFilterActive = selectedSessionTypes.value.length > 0;
@@ -137,4 +161,17 @@ th, td { border: 1px solid var(--color-3, #ccc); padding: 0.75rem 1rem; text-ali
 th { background-color: var(--color-5, #f0f0f0); }
 tbody tr:nth-child(even) { background-color: var(--color-6, #f9f9f9); }
 .no-absences { text-align: center; font-style: italic; color: var(--color-2, #555); }
+
+.justification-cell {
+  cursor: pointer;
+  font-weight: bold;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+.justification-cell:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+.is-justified { color: #27ae60; }
+.is-unjustified { color: #c0392b; }
 </style>

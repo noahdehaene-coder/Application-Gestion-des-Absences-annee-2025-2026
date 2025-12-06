@@ -70,6 +70,7 @@ export class CourseMaterialService {
       include: {
         presence_slot: {
           select: {
+            id: true,
             date: true,
             slot_session_type: {
               select: {
@@ -92,7 +93,11 @@ export class CourseMaterialService {
       session_type: a.presence_slot.slot_session_type.sessionTypeGlobal.name,
       
       date: a.presence_slot.date,
-      courseId: a.presence_slot.slot_session_type.session_type_course_material.id, 
+      courseId: a.presence_slot.slot_session_type.session_type_course_material.id,
+
+      justified: a.justified,       
+      student_id: a.student_id,     
+      slot_id: a.presence_slot.id,
     }));
   }
 

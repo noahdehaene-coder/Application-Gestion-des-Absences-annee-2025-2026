@@ -9,6 +9,22 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 export class PresenceController {
   constructor(private readonly presenceService: PresenceService) {}
 
+  @Get('slot/:slot_id')
+  @ApiOperation({ summary: 'Récupérer les absences par ID de créneau' })
+  async getBySlot(@Param('slot_id', ParseIntPipe) slot_id: number) {
+     return this.presenceService.getBySlotId(slot_id);
+  }
+
+  @Put('update/:slot_id')
+  @ApiOperation({ summary: 'Mettre à jour les absences pour un créneau' })
+  async updateMany(@Param('slot_id', ParseIntPipe) slot_id: number, @Body() student_ids: number[]) {
+    await this.presenceService.deleteBySlot(slot_id);
+    if (student_ids.length > 0) {
+      return this.presenceService.postMany(slot_id, student_ids);
+    }
+    return { message: 'Mise à jour effectuée' };
+  }
+
   @Get('by-year/:year')
   @ApiOperation({ summary: 'Récupérer les absences par année' })
   @ApiParam({ name: 'year', type: Number, example: 1 })
@@ -38,20 +54,9 @@ export class PresenceController {
   @Post()
   @ApiOperation({ summary: 'Créer une absence' })
   @ApiResponse({ status: 201, description: 'Absence créée avec succès' })
-  /*async post(@Body() createPresenceDto: CreatePresenceDto) {
-    const data: Prisma.presenceCreateInput = {
-      presence_student: {
-        connect: { id: createPresenceDto.student_id },
-      },
-      presence_slot: {
-        connect: { id: createPresenceDto.slot_id },
-      },
-    };
-    return this.presenceService.post(data);
-  }*/
+
 
   async post(@Body() createPresenceDto: CreatePresenceDto) {
-    // On passe juste le DTO au service, c'est le service qui travaille.
     return this.presenceService.post(createPresenceDto);
   }
 

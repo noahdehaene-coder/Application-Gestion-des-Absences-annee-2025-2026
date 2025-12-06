@@ -1,3 +1,4 @@
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 // Fonction utilitaire pour obtenir les en-têtes d'authentification
 function getAuthHeader() {
   const token = localStorage.getItem('token');

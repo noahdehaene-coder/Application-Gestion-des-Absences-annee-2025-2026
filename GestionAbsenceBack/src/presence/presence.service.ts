@@ -7,6 +7,18 @@ import { CreatePresenceDto } from './dto/create-presence.dto';
 export class PresenceService {
   constructor(private prisma: PrismaService) {}
 
+  async getBySlotId(slotId: number) {
+    return this.prisma.presence.findMany({
+      where: { slot_id: slotId },
+    });
+  }
+
+  async deleteBySlot(slotId: number) {
+    return this.prisma.presence.deleteMany({
+      where: { slot_id: slotId },
+    });
+  }
+
   async getByYear(year: number) {
     const semesterNames = [`S${(year - 1) * 2 + 1}`, `S${(year - 1) * 2 + 2}`];
     

@@ -1,9 +1,6 @@
-<!--Page de sélection des absences pour un créneau-->
 <template>
     <main class="left">
         <h1>Appel pour {{ sessionTypeName }} {{ courseName }}</h1>
-        
-
         <div>
             <h2>{{ groupName }}</h2>
             <div class="search-container">
@@ -33,20 +30,25 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
 import { getStudentsByGroupId } from '@/shared/fetchers/students';
-import { postAbsence, updateAbsences, getAbsencesBySlotId } from '@/shared/fetchers/presence';
 import { postSlot, searchSlot } from '@/shared/fetchers/slots';
+import { updateAbsences, getAbsencesBySlotId } from '@/shared/fetchers/presence';
 
 const studentsInGroup = ref([]); 
 const searchQuery = ref("");
-
 const route = useRoute();
+const router = useRouter();
+
 const groupName = route.params.groupName;
 const groupId = Number(route.params.groupId);
 const sessionTypeName = route.params.sessionTypeName;
 const sessionTypeGlobalId = Number(route.params.sessionTypeGlobalId);
 const courseName = route.params.courseName;
 const date = route.params.date;
+
 const slot = ref(null);
+const presentStudentsId = ref([]);
+const allSelected = ref(false);
+const callSaved = ref(false);
 
 onMounted(async () => {
     studentsInGroup.value = await getStudentsByGroupId(groupId);
@@ -55,7 +57,6 @@ onMounted(async () => {
     
     if (existingSlot) {
         slot.value = existingSlot;
-        isEditMode.value = true;
         
         const existingAbsences = await getAbsencesBySlotId(slot.value.id);
         const absentIds = existingAbsences.map(p => p.student_id);
@@ -63,16 +64,12 @@ onMounted(async () => {
         presentStudentsId.value = studentsInGroup.value
             .filter(student => !absentIds.includes(student.id))
             .map(student => student.id);
+            
     } else {
         slot.value = null;
-        isEditMode.value = false;
         selectAll(); 
     }
 });
-
-const props = defineProps({
-    students: Array
-})
 
 const filteredStudents = computed(() =>
     studentsInGroup.value.filter(s =>
@@ -80,19 +77,14 @@ const filteredStudents = computed(() =>
     )
 );
 
-const presentStudentsId = ref([]);
-
 const absentStudentsId = computed(() =>
     studentsInGroup.value
         .map(student => student.id)
         .filter(id => !presentStudentsId.value.includes(id))
 );
 
-const allSelected = ref(false);
-
 function selectAll() { 
     const studentsIdInGroup = studentsInGroup.value.map(student => student.id);
-
     if (!allSelected.value) {
         presentStudentsId.value = studentsIdInGroup.slice();
     } else {
@@ -101,19 +93,14 @@ function selectAll() {
     allSelected.value = !allSelected.value;
 }
 
-const callSaved = ref(false);
-async function saveCall() {
+async function saveCallAndGoBack() {
     if (!slot.value) {
         slot.value = await postSlot(groupId, courseName, sessionTypeGlobalId, date);
     }
-    await postAbsence(slot.value.id, absentStudentsId.value);
+    
+    await updateAbsences(slot.value.id, absentStudentsId.value);
+    
     callSaved.value = true;
-}
-
-const router = useRouter();
-
-async function saveCallAndGoBack() {
-    await saveCall();
     router.go(-1);
 }
 </script>
@@ -121,9 +108,7 @@ async function saveCallAndGoBack() {
 <style scoped>
 @import url("../shared/shared.css");
 
-#select-all {
-    margin-bottom: 1rem;
-}
+#select-all { margin-bottom: 1rem; }
 
 .list-presence {
     list-style-type: none;

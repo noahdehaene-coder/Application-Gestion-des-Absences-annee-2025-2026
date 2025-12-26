@@ -98,6 +98,8 @@ export class CourseMaterialService {
       justified: a.justified,       
       student_id: a.student_id,     
       slot_id: a.presence_slot.id,
+
+      justificationFile: a.justificationFile
     }));
   }
 

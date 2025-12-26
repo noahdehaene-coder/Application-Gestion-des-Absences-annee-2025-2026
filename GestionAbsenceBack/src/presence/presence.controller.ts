@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UploadedFile, UseInterceptors, ParseIntPipe, BadRequestException, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UploadedFile, UseInterceptors, ParseIntPipe, BadRequestException, UseGuards, Request, Res, StreamableFile, NotFoundException } from '@nestjs/common';
 import { PresenceService } from './presence.service';
 import { CreatePresenceDto } from './dto/create-presence.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -6,6 +6,9 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { createReadStream } from 'fs';
+import { join } from 'path';
+import type { Response } from 'express';
 
 @ApiTags('Presence')
 @Controller('presence')
@@ -52,6 +55,31 @@ export class PresenceController {
   @ApiResponse({ status: 200, description: 'Liste complète des absences' })
   getAll() {
     return this.presenceService.getAll();
+  }
+
+  @Get('download/:student_id/:slot_id')
+  @ApiOperation({ summary: 'Télécharger le justificatif d\'une absence' })
+  async downloadJustification(
+    @Param('student_id', ParseIntPipe) studentId: number,
+    @Param('slot_id', ParseIntPipe) slotId: number,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const presence = await this.presenceService.get({
+      student_id_slot_id: { student_id: studentId, slot_id: slotId }
+    });
+
+    if (!presence || !presence.justificationFile) {
+      throw new NotFoundException("Aucun justificatif trouvé pour cette absence.");
+    }
+
+    const file = createReadStream(join(process.cwd(), presence.justificationFile));
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="justificatif-${studentId}-${slotId}.pdf"`,
+    });
+
+    return new StreamableFile(file);
   }
 
   @Post()

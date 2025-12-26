@@ -29,6 +29,7 @@
             <th>Matière</th>
             <th>Type</th>
             <th>Absence</th>
+            <th>Justificatif</th>
           </tr>
         </thead>
         <tbody>
@@ -43,6 +44,17 @@
               title="Cliquer pour modifier"
             >
               {{ absence.justified ? 'Justifiée' : 'Non justifiée' }}
+            </td>
+            <td>
+              <button 
+                v-if="absence.justificationFile" 
+                @click="downloadFile(absence)" 
+                class="download-btn"
+                title="Télécharger le PDF"
+              >
+                📄 Voir le PDF
+              </button>
+              <span v-else class="no-file">-</span>
             </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
@@ -81,6 +93,35 @@ const uniqueSessionTypes = computed(() => {
   });
   return Array.from(types);
 });
+
+const downloadFile = async (absence) => {
+  try {
+    const token = localStorage.getItem('token');
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    
+    const response = await fetch(`${API_URL}/presence/download/${absence.student_id}/${absence.slot_id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Erreur lors du téléchargement');
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Justificatif_${absence.course_material}_${formatDate(absence.date)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+  } catch (error) {
+    console.error(error);
+    alert("Impossible de télécharger le fichier (peut-être introuvable sur le serveur).");
+  }
+};
 
 onMounted(async () => {
   if (isNaN(studentId)) {
@@ -174,4 +215,25 @@ tbody tr:nth-child(even) { background-color: var(--color-6, #f9f9f9); }
 }
 .is-justified { color: #27ae60; }
 .is-unjustified { color: #c0392b; }
+
+.download-btn {
+  background-color: var(--color-2, #0056b3);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.download-btn:hover {
+  background-color: var(--color-1, #003d82);
+}
+
+.no-file {
+  color: #999;
+  font-style: italic;
+  font-size: 0.85rem;
+}
 </style>

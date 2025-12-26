@@ -22,7 +22,7 @@ model User {
   slots    slot[]
 
   studentId Int?     @unique
-  student   student? @relation(fields: [studentId], references: [id])
+  student   student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 

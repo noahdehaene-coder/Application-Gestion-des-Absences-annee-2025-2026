@@ -113,7 +113,7 @@ function savePreferences() {
 .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
 .checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 4px; transition: background 0.2s; }
 .checkbox-wrapper:hover { background-color: #f3f4f6; }
-.checkbox-wrapper input { width: 1.2rem; height: 1.2rem; cursor: pointer; }
+.checkbox-wrapper input { width: 1.2rem; height: 1.2rem; cursor: pointer; flex-shrink: 0;}
 .checkbox-wrapper label { cursor: pointer; user-select: none; font-size: 0.95rem; }
 .no-data { font-style: italic; color: #888; font-size: 0.9rem; }
 .actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; }

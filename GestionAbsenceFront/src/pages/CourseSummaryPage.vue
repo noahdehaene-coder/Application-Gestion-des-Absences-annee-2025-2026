@@ -46,7 +46,7 @@
             </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
-            <td colspan="3" class="no-absences">Aucune absence trouvée pour cette matière.</td>
+            <td colspan="4" class="no-absences">Aucune absence trouvée pour cette matière.</td>
           </tr>
         </tbody>
       </table>

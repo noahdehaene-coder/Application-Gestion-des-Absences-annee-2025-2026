@@ -18,6 +18,7 @@
                     <div>
                         <label>Semestre en cours : </label>
                         <select v-model="semesterStudentId">
+                            <option value="" disabled>-- Choisir un semestre --</option>
                             <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
                                 {{ semester.name }}</option>
                         </select>
@@ -26,22 +27,23 @@
             </div>
 
             <div class="right-column">
-                <h2>Sélectionnez ses groupes et ses options</h2>
+                <h2>Sélectionnez ses groupes</h2>
                 <div class="search-container">
                     <SearchIcon class="search-icon" />
                     <input class="search-bar" type="search" v-model="searchQuery" placeholder="Rechercher un groupe" />
                 </div>
-                <ul class="list-groups">
+                
+                <div v-if="!semesterStudentId" style="margin-top: 1rem; color: #666; font-style: italic;">
+                    Veuillez sélectionner un semestre à gauche pour voir les groupes disponibles.
+                </div>
+
+                <ul v-else class="list-groups">
                     <li v-for="group in filteredGroups" :key="group.id">
                         <input type="checkbox" :id="`group-${group.id}`" :value="group.id" v-model="studentGroupsIds">
                         <label :for="`group-${group.id}`">{{ group.name }}</label>
                     </li>
-                </ul>
-
-                <ul class="list-groups">
-                    <li v-for="group in filteredOtherGroups" :key="group.id">
-                        <input type="checkbox" :id="`group-${group.id}`" :value="group.id" v-model="studentGroupsIds">
-                        <label :for="`group-${group.id}`">{{ group.name }}</label>
+                    <li v-if="filteredGroups.length === 0" style="padding: 10px; text-align: center;">
+                        Aucun groupe trouvé pour ce semestre.
                     </li>
                 </ul>
             </div>
@@ -53,70 +55,84 @@
 
 <script setup>
 import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-// Imports des fetchers
 import { getStudentById, postStudent, putStudentById } from '../shared/fetchers/students';
-import { getGroupsByStudentId, getAllGroups, getGroupById } from '../shared/fetchers/groups';
+import { getGroupsByStudentId, getAllGroupsBySemester, getGroupById } from '../shared/fetchers/groups';
 import { getAllSemesters } from '../shared/fetchers/semesters';
-import { postInscription, deleteInscriptionById } from '../shared/fetchers/inscriptions';
+import { postInscription, deleteInscriptionById, getInscriptions } from '../shared/fetchers/inscriptions';
 
 const student = ref(null);
-// --- CORRECTION : Initialisation avec [] au lieu de null ---
-const semesters = ref([]); // Ligne 55
-const groups = ref([]); // Ligne 56
-const otherGroups = ref([]); // Ligne 57
-// --- FIN CORRECTION ---
-const studentGroupsIds = ref([]);
+const semesters = ref([]);
+const groups = ref([]); // Contient TOUS les groupes du semestre sélectionné
+const studentGroupsIds = ref([]); // IDs des groupes cochés (Inscriptions voulues)
+const initialEnrolledIds = ref([]); // Pour savoir ce qu'il faut supprimer/ajouter à la fin
+
 const searchQuery = ref("");
 const router = useRouter();
 const route = useRoute();
 
-const studentId = Number(route.params.id); // Fonctionne maintenant (grâce à routes.js)
+const studentId = Number(route.params.id);
 const isNewStudent = computed(() => studentId === 0);
-const semesterStudentId = ref(null);
+const semesterStudentId = ref("");
 
 onMounted(async () => {
     semesters.value = await getAllSemesters() || [];
 
     if (!isNewStudent.value) {
         student.value = await getStudentById(studentId);
-        // Utilise '|| []' pour s'assurer que c'est un tableau même si l'API échoue
-        groups.value = await getGroupsByStudentId(studentId) || []; 
-        studentGroupsIds.value = groups.value.map(g => g.id); // Ligne 82 (maintenant sûre)
         
-        if (groups.value.length > 0) {
-            const groupWithSemester = await getGroupById(groups.value[0].id);
-            semesterStudentId.value = groupWithSemester.semester_id;
-        } else if (student.value) {
-            // (Logique alternative si besoin)
+        const currentGroups = await getGroupsByStudentId(studentId) || [];
+        studentGroupsIds.value = currentGroups.map(g => g.id);
+        initialEnrolledIds.value = [...studentGroupsIds.value];
+
+        if (currentGroups.length > 0) {
+            const firstGroup = currentGroups[0];
+            if (firstGroup.semester_id) {
+                semesterStudentId.value = firstGroup.semester_id;
+            } else {
+                const details = await getGroupById(firstGroup.id);
+                semesterStudentId.value = details.semester_id;
+            }
+        } else {
         }
     } else {
-        student.value = {
-            id: 0,
-            student_number: "",
-            name: "",
-        };
-        groups.value = await getAllGroups() || [];
+        student.value = { id: 0, student_number: "", name: "" };
+        if (semesters.value.length > 0) semesterStudentId.value = semesters.value[0].id;
+    }
+
+    if (semesterStudentId.value) {
+        await loadSemesterGroups(semesterStudentId.value);
     }
 });
 
-// Fonctions computed (fonctionnent maintenant)
+watch(semesterStudentId, async (newVal) => {
+    if (newVal) {
+        await loadSemesterGroups(newVal);
+    } else {
+        groups.value = [];
+    }
+});
+
+async function loadSemesterGroups(semId) {
+    try {
+        groups.value = await getAllGroupsBySemester(semId) || [];
+    } catch (e) {
+        console.error("Erreur chargement groupes du semestre", e);
+        groups.value = [];
+    }
+}
+
 const filteredGroups = computed(() =>
-    groups.value.filter(group => // Ligne 110 (maintenant sûre)
-        group.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-);
-const filteredOtherGroups = computed(() =>
-    otherGroups.value.filter(group =>
+    groups.value.filter(group =>
         group.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
 );
 
-// Soumission du formulaire
 async function submit() {
     let currentStudentId = studentId;
     try {
+        // 1. Sauvegarde / Création de l'étudiant
         if (isNewStudent.value) {
             const newStudent = await postStudent({
                 name: student.value.name,
@@ -124,30 +140,32 @@ async function submit() {
             });
             currentStudentId = newStudent.id;
         } else {
-            // Met à jour l'étudiant existant (en s'assurant que putStudentById est correct)
-            await putStudentById(
-                currentStudentId,
-                { // Envoie un objet, pas des arguments séparés
-                  name: student.value.name,
-                  student_number: student.value.student_number
-                }
-            );
+            await putStudentById(currentStudentId, {
+                name: student.value.name,
+                student_number: student.value.student_number
+            });
         }
 
-        const originalGroupIds = groups.value.map(g => g.id);
-        const newGroupIds = studentGroupsIds.value;
+        // 2. Gestion des inscriptions
+        const oldIds = initialEnrolledIds.value; 
+        const newIds = studentGroupsIds.value;   
 
-        const toAdd = newGroupIds.filter(id => !originalGroupIds.includes(id));
+        // A. AJOUTS
+        const toAdd = newIds.filter(id => !oldIds.includes(id));
         for (const groupId of toAdd) {
             await postInscription(currentStudentId, groupId);
         }
 
-        const toRemove = originalGroupIds.filter(id => !newGroupIds.includes(id));
+        // B. SUPPRESSIONS (Correction ici)
+        const toRemove = oldIds.filter(id => !newIds.includes(id));
         for (const groupId of toRemove) {
+            // On appelle directement la fonction avec (ID étudiant, ID groupe)
             await deleteInscriptionById(currentStudentId, groupId);
         }
 
-        alert("Étudiant enregistré avec succès !");
+        alert("Modifications enregistrées avec succès !");
+        // On recharge les données pour être sûr que tout est synchro
+        // ou on redirige :
         router.push({ name: 'SelectStudentModification' });
 
     } catch (error) {
@@ -157,9 +175,7 @@ async function submit() {
 }
 </script>
 
-
 <style scoped>
-/* Style d'origine */
 @import url("../shared/shared.css");
 
 .page-layout {
@@ -218,6 +234,17 @@ select {
 .list-groups>li {
     background-color: var(--color-6);
     border-radius: 5px;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;       
+    display: flex;        
+    align-items: center;
+}
+
+.list-groups>li input {
+    margin-right: 10px;
+    margin-left: 0;
+    flex: 0;
+    width: auto;
 }
 
 .search-bar {

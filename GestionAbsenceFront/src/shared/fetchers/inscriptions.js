@@ -52,7 +52,11 @@ export async function postInscriptionsCSV(groupId, fichier) {
     try {
         const response = await fetch(`http://localhost:3000/csv/upload/inscription/${groupId}`, {
             method: "POST",
-            body: formData,
+            headers: getAuthHeader(),
+            body: JSON.stringify({
+                student_id: parseInt(studentId),
+                group_id: parseInt(groupId)
+            })
         });
 
         if (!response.ok) {

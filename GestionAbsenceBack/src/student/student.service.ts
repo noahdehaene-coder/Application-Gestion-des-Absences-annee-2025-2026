@@ -226,24 +226,26 @@ export class StudentService {
     const { password, ...studentData } = data;
 
     if (password) {
-      let emailPrefix = studentData.name
+
+      const nameSlug = studentData.name
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .trim()
-        .replace(/\s+/g, '.');
+        .replace(/[^a-z0-9]/g, '.');
 
-      const email = `${emailPrefix}@etu.univ-grenoble-alpes.fr`;
+      const email = `${nameSlug}@etu.univ-grenoble-alpes.fr`;
 
       return this.prisma.student.create({
         data: {
           ...studentData,
           user: {
             create: {
-              email: email, 
+              email: email,
               name: studentData.name,
               password: password,
-            }
-          }
+              role: UserRole.ETUDIANT,
+            },
+          },
         },
       });
     }

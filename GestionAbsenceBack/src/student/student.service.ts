@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { Prisma, student } from '@prisma/client';
+import { Prisma, student, UserRole } from '@prisma/client';
 
 @Injectable()
 export class StudentService {
@@ -222,9 +222,34 @@ export class StudentService {
     });
   }
 
-  async post(data: Prisma.studentCreateInput): Promise<student> {
+  async post(data: any): Promise<student> {
+    const { password, ...studentData } = data;
+
+    if (password) {
+      let emailPrefix = studentData.name
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '.');
+
+      const email = `${emailPrefix}@etu.univ-grenoble-alpes.fr`;
+
+      return this.prisma.student.create({
+        data: {
+          ...studentData,
+          user: {
+            create: {
+              email: email, 
+              name: studentData.name,
+              password: password,
+            }
+          }
+        },
+      });
+    }
+
     return this.prisma.student.create({
-      data,
+      data: studentData,
     });
   }
 

@@ -49,7 +49,9 @@
             </div>
         </div>
 
-        <button @click="submit" class="button">Enregistrer</button>
+        <div class="btn">
+            <button @click="submit" class="button">Enregistrer</button>
+        </div>
     </main>
 </template>
 
@@ -116,7 +118,9 @@ watch(semesterStudentId, async (newVal) => {
 
 async function loadSemesterGroups(semId) {
     try {
-        groups.value = await getAllGroupsBySemester(semId) || [];
+        const year = Math.ceil(semId / 2);
+        const allGroupsInYear = await getAllGroupsBySemester(year) || [];
+        groups.value = allGroupsInYear.filter(group => group.semester_id === semId);
     } catch (e) {
         console.error("Erreur chargement groupes du semestre", e);
         groups.value = [];
@@ -242,5 +246,10 @@ select {
 
 .search-bar {
     margin-left: 0;
+}
+
+.btn {
+    margin-top: 2rem;
+    text-align: center;
 }
 </style>

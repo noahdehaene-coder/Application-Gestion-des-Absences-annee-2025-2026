@@ -58,6 +58,8 @@ const groupsL1 = ref([]);
 const groupsL2 = ref([]);
 const groupsL3 = ref([]);
 
+const excludedGroups = ['L1S1', 'L1S2', 'L2S3', 'L2S4', 'L3S5', 'L3S6'];
+
 onMounted(async () => {
   groupsL1.value = await getAllGroupsBySemester(1);
   groupsL2.value = await getAllGroupsBySemester(2);
@@ -68,19 +70,22 @@ onMounted(async () => {
 const selectedGroupL1 = ref('');
 const filteredGroupsL1 = computed(() =>
   groupsL1.value.filter(g =>
-    g.name.toLowerCase().includes(selectedGroupL1.value.toLowerCase())
+    g.name.toLowerCase().includes(selectedGroupL1.value.toLowerCase()) &&
+    !excludedGroups.includes(g.name)
   ));
 
 const selectedGroupL2 = ref('');
 const filteredGroupsL2 = computed(() =>
   groupsL2.value.filter(g =>
-    g.name.toLowerCase().includes(selectedGroupL2.value.toLowerCase())
+    g.name.toLowerCase().includes(selectedGroupL2.value.toLowerCase()) &&
+    !excludedGroups.includes(g.name)
   ));
 
 const selectedGroupL3 = ref('');
 const filteredGroupsL3 = computed(() =>
   groupsL3.value.filter(g =>
-    g.name.toLowerCase().includes(selectedGroupL3.value.toLowerCase())
+    g.name.toLowerCase().includes(selectedGroupL3.value.toLowerCase()) &&
+    !excludedGroups.includes(g.name)
   ));
 </script>
 

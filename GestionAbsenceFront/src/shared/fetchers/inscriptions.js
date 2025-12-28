@@ -19,20 +19,20 @@ export async function postInscription(studentId, groupId) {
     try {
         const response = await fetch("http://localhost:3000/inscription", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: getAuthHeader(), 
             body: JSON.stringify({
-                student_id: studentId,
-                group_id: groupId
+                student_id: parseInt(studentId),
+                group_id: parseInt(groupId)
             })
         })
         if (!response.ok) {
-            throw new Error("Erreur lors de l'envoi de l'inscription");
+            const errorText = await response.text(); 
+            throw new Error(`Erreur backend (${response.status}): ${errorText}`);
         }
         return await response.json();
     } catch (error) {
         console.error("Erreur lors de l'envoi de l'inscription :", error);
+        throw error;
     }
 }
 
@@ -158,5 +158,23 @@ export async function deleteInscriptions() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des inscriptions:", error);
+    }
+}
+
+/**
+ * Récupère toutes les inscriptions.
+ * @returns {Promise<Object[]>} Liste des inscriptions.
+ */
+export async function getInscriptions() {
+    try {
+        const response = await fetch("http://localhost:3000/inscription", {
+            method: "GET",
+            headers: getAuthHeader()
+        });
+        if (!response.ok) throw new Error("Erreur récupération inscriptions");
+        return await response.json();
+    } catch (error) {
+        console.error("Erreur getInscriptions:", error);
+        return [];
     }
 }

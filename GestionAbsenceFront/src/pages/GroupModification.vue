@@ -1,11 +1,12 @@
 <template>
   <main class="left" v-if="group && semester">
     <div class="container">
+      
       <div class="left-container">
-        <h1>Liste des étudiant.e.s {{ group.name }} {{ semester.name }}</h1>
+        <h1>Membres de {{ group.name }}</h1>
         <div class="search-container">
           <SearchIcon class="search-icon" />
-          <input class="search-bar" type="search" v-model="searchQuery1" placeholder="Rechercher un.e étudiant.e" />
+          <input class="search-bar" type="search" v-model="searchQuery1" placeholder="Filtrer la liste..." />
         </div>
         <ul class="list">
           <li v-for="student in filteredStudentsInGroup" :key="student.id" class="students-list">
@@ -17,7 +18,7 @@
                 <p>{{ group.name }}</p>
               </div>
             </div>
-            <button @click="deleteStudent(student)" class="button" id="delete-btn">
+            <button @click="deleteStudent(student)" class="button delete-btn" title="Retirer du groupe">
               ×
             </button>
           </li>
@@ -25,24 +26,58 @@
       </div>
 
       <div class="right-container">
-        <h1>Liste des autres étudiant.e.s</h1>
+        <h1>Autres étudiants</h1>
+        
+        <div class="select-container">
+          <select v-model="selectedSource" @change="loadRightList" class="group-select">
+            <option value="" disabled>-- Choisir une source --</option>
+            <option value="no_group">Étudiants sans groupe</option>
+            <option disabled>--- Groupes du semestre ---</option>
+            <option v-for="g in sourceGroups" :key="g.id" :value="g.id">
+              Groupe {{ g.name }}
+            </option>
+          </select>
+        </div>
+
         <div class="search-container">
           <SearchIcon class="search-icon" />
           <input class="search-bar" type="search" v-model="searchQuery2" placeholder="Rechercher un.e étudiant.e" />
         </div>
-        <ul class="list">
-          <li v-for="student in filteredStudentsOutsideGroup" :key="student.id" class="students-list">
+
+        <div v-if="loadingRight" class="loading-text">Chargement...</div>
+
+        <ul v-else class="list">
+          <li v-for="student in filteredStudentsInOtherGroups" :key="student.id" class="students-list">
             <div class="student-list-container">
               <div class="student-info">
                 {{ student.name }}
               </div>
-              <div class="student-group-number" v-if="student.originalGroupId">
-                <p>{{ student.originalGroupName }}</p>
+              <div class="student-group-number">
+                <p>{{ student.originalGroupName || 'Sans groupe' }}</p>
               </div>
             </div>
-            <button @click="addStudent(student)" class="button" id="add-btn">
-              +
-            </button>
+            
+            <div class="action-buttons">
+              <button 
+                @click="addStudent(student, false)" 
+                class="button add-btn" 
+                title="Ajouter (L'étudiant sera dans les deux groupes)"
+              >
+                +
+              </button>
+
+              <button 
+                v-if="student.originalGroupId" 
+                @click="addStudent(student, true)" 
+                class="button move-btn" 
+                title="Déplacer (Quitte l'autre groupe)"
+              >
+                ←
+              </button>
+            </div>
+          </li>
+          <li v-if="filteredStudentsInOtherGroups.length === 0 && selectedSource" class="empty-msg">
+            Aucun étudiant disponible dans cette source.
           </li>
         </ul>
       </div>
@@ -51,88 +86,143 @@
 </template>
 
 <script setup>
-import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { getStudentsByGroupId, getStudentsSameOtherGroup } from '../shared/fetchers/students';
-import { getGroupById } from '../shared/fetchers/groups';
+import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
+
+import { getGroupById, getAllGroupsBySemester } from '../shared/fetchers/groups';
+import { getStudentsByGroupId, getStudents } from '../shared/fetchers/students';
 import { getSemesterById } from '../shared/fetchers/semesters';
-import { postInscription, putInscriptionAndDeleteOldInscription, deleteInscriptionById } from '../shared/fetchers/inscriptions';
+import { postInscription, deleteInscriptionById, putInscriptionAndDeleteOldInscription, getInscriptions } from '../shared/fetchers/inscriptions';
 
 const route = useRoute();
-const groupId = Number(route.params.id);
+const currentGroupId = route.params.id;
 
-const studentsInGroup = ref([]);
-const studentsOutsideGroup = ref([]);
-
-const searchQuery1 = ref("");
-const searchQuery2 = ref("");
-
-const group = ref([]);
+const group = ref(null);
 const semester = ref(null);
-const currentGroupId = groupId;
+const studentsInGroup = ref([]);
 
-/**
- * Charge toutes les listes
- */
-async function loadLists() {
-  studentsInGroup.value = await getStudentsByGroupId(currentGroupId) || [];
-  studentsOutsideGroup.value = await getStudentsSameOtherGroup(currentGroupId) || [];
-}
+const sourceGroups = ref([]);
+const selectedSource = ref('');
+const studentsInRightList = ref([]);
+const loadingRight = ref(false);
+
+const searchQuery1 = ref('');
+const searchQuery2 = ref('');
 
 onMounted(async () => {
-  group.value = await getGroupById(currentGroupId);
-  if (group.value) {
+  await loadMainData();
+});
+
+async function loadMainData() {
+  if (!currentGroupId) return;
+
+  try {
+    group.value = await getGroupById(currentGroupId);
     semester.value = await getSemesterById(group.value.semester_id);
+
+    const studentsIn = await getStudentsByGroupId(currentGroupId);
+    studentsInGroup.value = studentsIn.map(s => ({ ...s, name: s.name }));
+
+    const allGroupsInSemester = await getAllGroupsBySemester(group.value.semester_id);
+    sourceGroups.value = allGroupsInSemester.filter(g => g.id !== parseInt(currentGroupId));
+
+    if (selectedSource.value) {
+      await loadRightList();
+    }
+
+  } catch (error) {
+    console.error("Erreur chargement principal:", error);
   }
-  await loadLists();
+}
+
+
+async function loadRightList() {
+  if (!selectedSource.value) return;
+  
+  loadingRight.value = true;
+  studentsInRightList.value = [];
+
+  try {
+    let rawStudents = [];
+    let groupInfo = null;
+
+    if (selectedSource.value === 'no_group') {
+      const [allStudents, allInscriptions] = await Promise.all([
+        getStudents(),
+        getInscriptions()
+      ]);
+      
+      const studentIdsWithGroup = new Set(allInscriptions.map(i => i.student_id));
+      rawStudents = allStudents.filter(s => !studentIdsWithGroup.has(s.id));
+      
+    } else {
+      const groupId = selectedSource.value;
+      const sourceGroup = sourceGroups.value.find(g => g.id == groupId);
+      if (sourceGroup) groupInfo = { id: sourceGroup.id, name: sourceGroup.name };
+      
+      rawStudents = await getStudentsByGroupId(groupId);
+    }
+
+    studentsInRightList.value = rawStudents.map(s => ({
+      ...s,
+      name: s.name,
+      originalGroupId: groupInfo ? groupInfo.id : null,
+      originalGroupName: groupInfo ? groupInfo.name : null
+    }));
+
+  } catch (error) {
+    console.error("Erreur chargement liste droite:", error);
+  } finally {
+    loadingRight.value = false;
+  }
+}
+
+
+const filteredStudentsInGroup = computed(() => {
+  return studentsInGroup.value.filter(s => 
+    s.name.toLowerCase().includes(searchQuery1.value.toLowerCase())
+  );
+});
+
+const filteredStudentsInOtherGroups = computed(() => {
+  const currentMemberIds = new Set(studentsInGroup.value.map(s => s.id));
+
+  return studentsInRightList.value.filter(s => {
+    if (currentMemberIds.has(s.id)) return false;
+    return s.name.toLowerCase().includes(searchQuery2.value.toLowerCase());
+  });
 });
 
 
-const filteredStudentsInGroup = computed(() =>
-  studentsInGroup.value.filter(student =>
-    student.name.toLowerCase().includes(searchQuery1.value.toLowerCase())
-  )
-);
-const filteredStudentsOutsideGroup = computed(() =>
-  studentsOutsideGroup.value.filter(student =>
-    student.name.toLowerCase().includes(searchQuery2.value.toLowerCase())
-  )
-);
-
-/**
- * Supprime un étudiant du groupe
- */
 async function deleteStudent(student) {
-  const confirmDelete = confirm(`Voulez-vous vraiment supprimer ${student.name} du groupe ?`);
-  if (!confirmDelete) return;
-
+  if (!confirm(`Retirer ${student.name} du groupe ?`)) return;
   try {
     await deleteInscriptionById(student.id, currentGroupId);
-    await loadLists();
-  } catch (error) {
-    console.error("Erreur lors de la suppression de l'inscription :", error);
-    alert("La suppression a échoué. Veuillez réessayer.");
+    await loadMainData();
+  } catch (e) {
+    console.error(e);
+    alert("Erreur suppression.");
   }
 }
 
-/**
- * Ajoute un étudiant au groupe
- */
-async function addStudent(student) {
-  const confirmAdd = confirm(`Voulez-vous ajouter ${student.name} au groupe ?`);
-  if (!confirmAdd) return;
+async function addStudent(student, isMove) {
+  let msg = isMove 
+    ? `DÉPLACER ${student.name} de ${student.originalGroupName} vers ${group.value.name} ?`
+    : `AJOUTER ${student.name} à ${group.value.name} ?`;
+  
+  if (!confirm(msg)) return;
 
   try {
-    if (student.originalGroupId) {
+    if (isMove && student.originalGroupId) {
       await putInscriptionAndDeleteOldInscription(student.id, student.originalGroupId, currentGroupId);
     } else {
       await postInscription(student.id, currentGroupId);
     }
-    await loadLists();
-  } catch (error) {
-    console.error("Erreur lors de l'ajout de l'inscription :", error);
-    alert("L'ajout a échoué. Veuillez réessayer.");
+    await loadMainData();
+  } catch (e) {
+    console.error(e);
+    alert("Erreur opération.");
   }
 }
 </script>
@@ -144,6 +234,31 @@ async function addStudent(student) {
   display: grid;
   grid-template-columns: 50% 50%;
   gap: 2rem;
+
+}
+
+/* Styles du Select */
+.select-container {
+  margin-bottom: 1rem;
+  width: 100%; /* S'aligne avec la barre de recherche */
+}
+
+.group-select {
+  width: 80%; /* Même largeur que search-container */
+  padding: 0.7rem;
+  border: 1px solid var(--color-3);
+  border-radius: 8px;
+  background-color: white;
+  font-size: 1rem;
+  color: black;
+  outline: none;
+  cursor: pointer;
+}
+
+.search-container {
+  display: flex; align-items: center; background-color: white;
+  border: 1px solid var(--color-3); border-radius: 8px;
+  padding: 0.5rem 1rem; margin-bottom: 1rem; width: 80%;
 }
 
 .list {
@@ -160,31 +275,83 @@ async function addStudent(student) {
   border: solid lightgray;
   background-color: var(--color-6);
   border-radius: 5px;
+  margin-bottom: 1rem;
   padding: 0.5rem;
-  margin-bottom: 0.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-#add-btn {
-  color: var(--color-8);
-  border-color: var(--color-8);
+.student-info {
+  font-weight: bold;
 }
 
-#delete-btn {
-  color: var(--color-7);
-  border-color: var(--color-7);
+.student-group-number {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem; /* Espace entre les boutons */
 }
 
 .button {
-  margin: 0;
-  padding: 0.3rem;
-  font-size: 1.4rem;
-  background-color: var(--color-6);
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  width: 30px;
+  height: 30px;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0;
 }
 
 .button:hover {
-  background-color: var(--color-5);
+  opacity: 0.9;
+}
+
+.add-btn {
+  background-color: #388e3c; /* Vert pour Ajouter */
+}
+
+.move-btn {
+  background-color: rgb(218, 116, 14);
+}
+
+/* Bouton rouge pour la suppression (colonne de gauche) */
+.left-container .button {
+  background-color: rgb(255, 0, 0); 
+}
+
+
+.search-container {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid var(--color-3);
+  border-radius: 8px;
+  padding: 0.5rem 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-2);
+  margin-right: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.search-bar {
+  border: none;
+  outline: none;
+  width: 100%;
+  color: black;
+  font-size: 1rem;
+  margin-bottom: 0rem;
 }
 </style>

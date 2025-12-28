@@ -49,23 +49,27 @@ export async function postInscriptionsCSV(groupId, fichier) {
     const formData = new FormData();
     formData.append("fileInscription", fichier);
 
+    const headers = getAuthHeader();
+    delete headers['Content-Type'];
+
     try {
         const response = await fetch(`http://localhost:3000/csv/upload/inscription/${groupId}`, {
             method: "POST",
-            headers: getAuthHeader(),
-            body: JSON.stringify({
-                student_id: parseInt(studentId),
-                group_id: parseInt(groupId)
-            })
+            headers: headers,
+            body: formData
         });
 
         if (!response.ok) {
-            throw new Error("Erreur lors de l'envoi des étudiants");
+            const errorText = await response.text();
+            throw new Error(`Erreur backend (${response.status}): ${errorText}`);
         }
 
         console.log("Fichier envoyé avec succès");
+        return await response.json();
+
     } catch (error) {
         console.error("Erreur lors de l'envoi des étudiants :", error);
+        throw error;
     }
 }
 

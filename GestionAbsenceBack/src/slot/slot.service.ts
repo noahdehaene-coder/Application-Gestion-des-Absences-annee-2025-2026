@@ -137,7 +137,10 @@ export class SlotService {
           professorId: professorId
         }
       },
-      update: {},
+      update: {
+        start_time: new Date(start_time),
+        end_time: new Date(end_time),
+      },
       create: {
         date: isoDate,
         start_time: new Date(start_time),

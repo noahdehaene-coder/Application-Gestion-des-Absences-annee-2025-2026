@@ -69,7 +69,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-// Assurez-vous que fetchSlotsByDate est bien exporté dans slots.js
 import { fetchRecentCalls, fetchSlotsByDate } from '../shared/fetchers/slots';
 
 const router = useRouter();
@@ -80,10 +79,8 @@ const isLoading = ref(true);
 onMounted(async () => {
   isLoading.value = true;
   
-  // 1. Charger les modèles (Templates)
   recentCalls.value = await fetchRecentCalls();
 
-  // 2. Charger les appels spécifiques D'AUJOURD'HUI pour les modifier
   const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
   try {
     const slots = await fetchSlotsByDate(today);
@@ -111,7 +108,6 @@ function configure() {
  * La page CallPage détectera que le slot existe et chargera les cases déjà cochées.
  */
 function editExistingCall(slot) {
-  // On formate la date proprement pour l'URL
   const dateIso = new Date(slot.date).toISOString();
 
   router.push({
@@ -122,7 +118,9 @@ function editExistingCall(slot) {
       courseName: slot.slot_session_type.session_type_course_material.name,
       sessionTypeName: slot.slot_session_type.sessionTypeGlobal.name, 
       sessionTypeGlobalId: slot.slot_session_type.sessionTypeGlobal.id, 
-      date: dateIso
+      date: dateIso,
+      startTime: slot.start_time, 
+      endTime: slot.end_time
     }
   });
 }
@@ -131,24 +129,41 @@ function editExistingCall(slot) {
  * LANCER UN NOUVEL APPEL (Basé sur un modèle)
  */
 function startRecentCall(callTemplate) {
-  const today = new Date().toISOString(); 
+  // 1. On prend la date d'aujourd'hui
+  const now = new Date();
+  const dateIso = now.toISOString();
+  const dateYMD = dateIso.split('T')[0]; // Format YYYY-MM-DD
+
+  // 2. Comme le modèle n'a pas d'heure, on définit un créneau par défaut (ex: 08h-10h)
+  // Cela évite le crash "Missing param"
+  const defaultStart = new Date(`${dateYMD}T08:00:00`).toISOString();
+  const defaultEnd = new Date(`${dateYMD}T10:00:00`).toISOString();
   
   router.push({
     name: 'CallPage', 
     params: {
+      // On utilise 'callTemplate' ici, pas 'slot'
       groupId: callTemplate.groupId,
       groupName: callTemplate.groupName,
       courseName: callTemplate.courseName,
       sessionTypeName: callTemplate.sessionType, 
       sessionTypeGlobalId: callTemplate.sessionTypeGlobalId, 
-      date: today
+      date: dateIso,
+      
+      // On passe les heures par défaut pour que la page d'appel fonctionne
+      startTime: defaultStart,
+      endTime: defaultEnd
     }
   });
 }
 
-function formatTime(isoDate) {
-  if (!isoDate) return "";
-  return new Date(isoDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+function formatTime(isoString) {
+  if (!isoString) return '--:--';
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 </script>
 

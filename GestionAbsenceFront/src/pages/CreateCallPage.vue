@@ -57,8 +57,24 @@
       </div>
 
       <div class="form-group">
-        <label for="date-select">4. Date de l'appel</label>
-        <input id="date-select" type="date" v-model="selectedDate" required />
+        <label>4. Date et Horaires</label>
+        
+        <div class="datetime-container">
+          <div class="field-item">
+            <span class="sub-label">Jour :</span>
+            <input type="date" v-model="selectedDate" required />
+          </div>
+
+          <div class="field-item">
+            <span class="sub-label">De :</span>
+            <input type="time" v-model="selectedStartTime" required />
+          </div>
+
+          <div class="field-item">
+            <span class="sub-label">À :</span>
+            <input type="time" v-model="selectedEndTime" required />
+          </div>
+        </div>
       </div>
 
       <button type="submit" class="button primary-button">
@@ -86,7 +102,10 @@ const allSubjects = ref([]); // Contiendra UNIQUEMENT les matières préférées
 const selectedGroupId = ref(null);
 const selectedCourseId = ref(null);
 const selectedSessionTypeGlobalId = ref(null);
-const selectedDate = ref(new Date().toISOString().split('T')[0]); 
+const selectedDate = ref(new Date().toISOString().split('T')[0]);
+
+const selectedStartTime = ref("08:00");
+const selectedEndTime = ref("10:00");
 
 // Clé de stockage
 const STORAGE_KEY = 'prof_preferred_subjects';
@@ -172,6 +191,14 @@ function startCall() {
      alert("Erreur données."); return;
   }
 
+  if (selectedStartTime.value >= selectedEndTime.value) {
+    alert("L'heure de fin doit être postérieure à l'heure de début.");
+    return;
+  }
+
+  const startDateTime = new Date(`${selectedDate.value}T${selectedStartTime.value}`);
+  const endDateTime = new Date(`${selectedDate.value}T${selectedEndTime.value}`);
+
   router.push({
     name: 'CallPage',
     params: {
@@ -180,7 +207,9 @@ function startCall() {
       courseName: selectedSubject.name,
       sessionTypeGlobalId: selectedSessionTypeGlobalId.value, 
       sessionTypeName: selectedSession.name, 
-      date: new Date(selectedDate.value).toISOString()
+      date: new Date(selectedDate.value).toISOString(),
+      startTime: startDateTime.toISOString(), 
+      endTime: endDateTime.toISOString()
     }
   });
 }
@@ -197,4 +226,8 @@ function startCall() {
 .text-info { color: var(--color-2, #005a8f); font-style: italic; font-size: 0.85rem; margin-top: 0.25rem; }
 .text-warning { color: #d9534f; font-style: italic; font-size: 0.85rem; margin-top: 0.25rem; }
 .primary-button { background-color: var(--color-1, #005a8f); color: white; font-size: 1.1rem; padding: 0.75rem 1.25rem; cursor: pointer; margin-top: 1rem; }
+.datetime-container {display: flex;gap: 1rem;flex-wrap: wrap;}
+.field-item {display: flex;padding: 1rem;flex-direction: column;flex: 1;min-width: 120px;}
+.sub-label {font-size: 0.85rem;color: #666;margin-bottom: 0.3rem;}
+input[type="time"], input[type="date"] {width: 100%;padding: 0.6rem;border: 1px solid #ccc;border-radius: 4px;}
 </style>

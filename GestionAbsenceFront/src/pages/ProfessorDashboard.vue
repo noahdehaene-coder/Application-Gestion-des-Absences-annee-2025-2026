@@ -23,152 +23,186 @@
       
       <div class="recent-calls-list">
         <div v-for="slot in todayCalls" :key="slot.id" class="recent-call-item active-call">
-          <span>
-            <strong>{{ slot.slot_session_type.session_type_course_material.name }}</strong> 
-            ({{ slot.slot_session_type.sessionTypeGlobal.name }})
+          <div class="call-info">
+            <strong>{{ slot.slot_session_type?.session_type_course_material?.name || 'Cours' }}</strong> 
+            <span class="text-muted">({{ slot.slot_session_type?.sessionTypeGlobal?.name }})</span>
             <br />
-            <small>{{ slot.slot_group.name }}</small>
-          </span>
-
-          <div class="slot-time" style="color: #666; font-size: 0.9em; margin-top: 4px;">
-            <strong>{{ formatTime(slot.start_time) }}-{{ formatTime(slot.end_time) }}</strong>
+            <small>{{ slot.slot_group?.name || 'Groupe' }}</small> 
           </div>
-          
+
+          <div class="slot-time">
+              🕒 {{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}
+          </div>
+
           <button class="button secondary-button" @click="editExistingCall(slot)">
-            Modifier l'appel
+            Reprendre l'appel
           </button>
         </div>
       </div>
-      <hr />
     </div>
 
-    <h2>Reprendre un appel (Modèles)</h2>
-    
-    <div v-if="isLoading" class="loading-message">
-      Chargement...
-    </div>
+    <hr v-if="recentCalls.length > 0" />
 
-    <div v-else-if="recentCalls.length === 0 && todayCalls.length === 0" class="empty-state">
-      Vous n'avez pas encore d'appel enregistré.
-    </div>
+    <div v-if="recentCalls.length > 0" class="recent-calls-section">
+      <h2>Relancer un appel récent</h2>
+      <p class="info-text">Cliquez sur un modèle pour créer un appel aujourd'hui.</p>
+      
+      <div class="recent-calls-list">
+        <div v-for="call in recentCalls" :key="call.id" class="recent-call-item">
+          
+          <div class="call-info">
+            <strong>{{ call.courseName }}</strong>
+            <span class="text-muted"> - {{ call.sessionType }}</span>
+            <br>
+            <small>{{ call.groupName }}</small>
+          </div>
 
-    <div v-else class="recent-calls-list">
-      <p class="info-text">Cliquez sur "Lancer" pour créer un NOUVEL appel pour aujourd'hui sur ce modèle.</p>
-      <div v-for="call in recentCalls" :key="call.key" class="recent-call-item">
-        <span>
-          <strong>{{ call.courseName }}</strong> ({{ call.sessionType }})
-          <br />
-          <small>{{ call.groupName }}</small>
-        </span>
-        <button class="button" @click="startRecentCall(call)">Lancer (Aujourd'hui)</button>
+          <div class="time-selector">
+            <div class="time-field">
+              <label>Début</label>
+              <input type="time" v-model="call.inputStart" class="time-input">
+            </div>
+            <div class="time-field">
+              <label>Fin</label>
+              <input type="time" v-model="call.inputEnd" class="time-input">
+            </div>
+          </div>
+
+          <button class="button action-button" @click="startRecentCall(call)">
+            Lancer
+          </button>
+        </div>
       </div>
     </div>
+
+    <div v-else-if="!isLoading && todayCalls.length === 0" class="empty-state">
+      Aucun appel récent trouvé.
+    </div>
+    
+    <div v-if="isLoading" class="loading-message">Chargement...</div>
   </main>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchRecentCalls, fetchSlotsByDate } from '../shared/fetchers/slots';
+
+// --- CORRECTION DES IMPORTS ---
+// On importe les fonctions avec les BONS noms qui sont dans slots.js
+import { getUser } from '@/shared/fetchers/user';
+import { fetchRecentCalls, fetchSlotsByDate } from '@/shared/fetchers/slots'; 
 
 const router = useRouter();
+const professorName = ref("");
 const recentCalls = ref([]);
 const todayCalls = ref([]);
 const isLoading = ref(true);
 
+// Utilitaire : Extrait "08:00" depuis "2023-10-10T08:00:00"
+function getTimeFromIso(isoString) {
+  if (!isoString) return "08:00"; 
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Utilitaire : Affiche "08:00" (pour l'affichage texte)
+function formatTime(isoString) {
+  if (!isoString) return '--:--';
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 onMounted(async () => {
-  isLoading.value = true;
-  
-  recentCalls.value = await fetchRecentCalls();
-
-  const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
   try {
-    const slots = await fetchSlotsByDate(today);
-    if (slots) {
-      todayCalls.value = slots;
-    }
-  } catch (e) {
-    console.error("Impossible de charger les appels du jour", e);
-  }
+    const user = await getUser();
+    if (user) {
+      professorName.value = user.name;
+      
+      const today = new Date().toISOString().split('T')[0]; // Date YYYY-MM-DD
 
-  isLoading.value = false;
+      // On appelle les fonctions fetch... (sans user.id car votre slots.js utilise le token)
+      const [rawRecentCalls, rawTodaySlots] = await Promise.all([
+        fetchRecentCalls(),
+        fetchSlotsByDate(today)
+      ]);
+      
+      // --- LOGIQUE MAGIQUE ---
+      // On prépare les modèles pour qu'ils aient chacun leurs propres champs d'heure
+      recentCalls.value = (rawRecentCalls || []).map(call => ({
+        ...call,
+        // On initialise avec l'heure de l'ancien appel, ou 08h-10h par défaut
+        inputStart: call.start_time ? getTimeFromIso(call.start_time) : "08:00",
+        inputEnd: call.end_time ? getTimeFromIso(call.end_time) : "10:00"
+      }));
+
+      todayCalls.value = rawTodaySlots || [];
+    }
+  } catch (error) {
+    console.error("Erreur chargement dashboard :", error);
+  } finally {
+    isLoading.value = false;
+  }
 });
 
-function goToCreateCall() {
-  router.push({ name: 'CreateCallPage' });
-}
-
-function configure() {
-  router.push({ name: 'SelectSubjectsPage' });
-}
+function goToCreateCall() { router.push('/create-call'); }
+function configure() { router.push('/courses-management'); }
 
 /**
- * MODIFIER UN APPEL EXISTANT
- * Redirige vers CallPage avec les paramètres du slot existant.
- * La page CallPage détectera que le slot existe et chargera les cases déjà cochées.
- */
-function editExistingCall(slot) {
-  const dateIso = new Date(slot.date).toISOString();
-
-  router.push({
-    name: 'CallPage', 
-    params: {
-      groupId: slot.group_id,
-      groupName: slot.slot_group.name,
-      courseName: slot.slot_session_type.session_type_course_material.name,
-      sessionTypeName: slot.slot_session_type.sessionTypeGlobal.name, 
-      sessionTypeGlobalId: slot.slot_session_type.sessionTypeGlobal.id, 
-      date: dateIso,
-      startTime: slot.start_time, 
-      endTime: slot.end_time
-    }
-  });
-}
-
-/**
- * LANCER UN NOUVEL APPEL (Basé sur un modèle)
+ * LANCE UN NOUVEL APPEL BASÉ SUR LE MODÈLE ET L'HEURE CHOISIE
  */
 function startRecentCall(callTemplate) {
   // 1. On prend la date d'aujourd'hui
   const now = new Date();
-  const dateIso = now.toISOString();
-  const dateYMD = dateIso.split('T')[0]; // Format YYYY-MM-DD
+  const dateYMD = now.toISOString().split('T')[0];
 
-  // 2. Comme le modèle n'a pas d'heure, on définit un créneau par défaut (ex: 08h-10h)
-  // Cela évite le crash "Missing param"
-  const defaultStart = new Date(`${dateYMD}T08:00:00`).toISOString();
-  const defaultEnd = new Date(`${dateYMD}T10:00:00`).toISOString();
-  
+  // 2. On combine la date du jour avec l'heure que le prof a choisie dans les inputs
+  const startIso = new Date(`${dateYMD}T${callTemplate.inputStart}:00`).toISOString();
+  const endIso = new Date(`${dateYMD}T${callTemplate.inputEnd}:00`).toISOString();
+
+  // 3. On redirige vers la page d'appel avec ces informations précises
   router.push({
     name: 'CallPage', 
     params: {
-      // On utilise 'callTemplate' ici, pas 'slot'
       groupId: callTemplate.groupId,
-      groupName: callTemplate.groupName,
-      courseName: callTemplate.courseName,
-      sessionTypeName: callTemplate.sessionType, 
-      sessionTypeGlobalId: callTemplate.sessionTypeGlobalId, 
-      date: dateIso,
+      groupName: callTemplate.groupName || 'Groupe',
+      courseName: callTemplate.courseName || 'Cours',
+      sessionTypeName: callTemplate.sessionType || 'Cours', 
+      sessionTypeGlobalId: callTemplate.sessionTypeGlobalId,
+      date: now.toISOString(),
       
-      // On passe les heures par défaut pour que la page d'appel fonctionne
-      startTime: defaultStart,
-      endTime: defaultEnd
+      // On transmet les heures choisies
+      startTime: startIso,
+      endTime: endIso
     }
   });
 }
 
-function formatTime(isoString) {
-  if (!isoString) return '--:--';
-  const date = new Date(isoString);
-  return date.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
+/**
+ * REPREND UN APPEL DÉJÀ CRÉÉ AUJOURD'HUI
+ */
+function editExistingCall(slot) {
+  const dateIso = new Date(slot.date).toISOString();
+  const safeStart = slot.start_time ? new Date(slot.start_time).toISOString() : dateIso;
+  const safeEnd = slot.end_time ? new Date(slot.end_time).toISOString() : dateIso;
+
+  router.push({
+    name: 'CallPage', 
+    params: {
+      groupId: slot.group_id || slot.slot_group?.id,
+      groupName: slot.slot_group?.name,
+      courseName: slot.slot_session_type?.session_type_course_material?.name,
+      sessionTypeName: slot.slot_session_type?.sessionTypeGlobal?.name, 
+      sessionTypeGlobalId: slot.slot_session_type?.sessionTypeGlobal?.id, 
+      date: dateIso,
+      startTime: safeStart,
+      endTime: safeEnd
+    }
   });
 }
 </script>
 
 <style scoped>
-@import url('../shared/shared.css');
+@import url("../shared/shared.css");
 
 .dashboard-container {
   max-width: 800px;
@@ -217,27 +251,70 @@ hr {
 .recent-calls-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.8rem;
 }
 
+/* Style de la carte */
 .recent-call-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border: 1px solid var(--color-3, #ccc);
-  border-radius: 5px;
-  background-color: var(--color-6, #fff);
+  justify-content: space-between;
+  background: white;
+  border: 1px solid #ddd;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  gap: 1rem;
+  flex-wrap: wrap; /* Important pour mobile */
 }
 
-/* Style spécifique pour les appels du jour (bordure bleue pour les distinguer) */
 .active-call {
   border-left: 5px solid var(--color-1, #005a8f);
   background-color: #eef6fc;
 }
 
-.recent-call-item small {
-  color: var(--color-2, #555);
+.call-info {
+  flex: 1;
+  min-width: 150px;
+}
+
+.text-muted {
+  color: #777;
+  font-size: 0.9em;
+}
+
+.slot-time {
+  color: #555;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+/* --- Style des sélecteurs d'heure --- */
+.time-selector {
+  display: flex;
+  gap: 10px;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.time-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-field label {
+  font-size: 0.7rem;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.time-input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 3px;
+  color: #333;
+  cursor: pointer;
 }
 
 /* Bouton Modifier (Contour bleu, fond blanc) */
@@ -249,8 +326,13 @@ hr {
   font-size: 0.9rem;
 }
 
-.secondary-button:hover {
+.action-button {
   background-color: var(--color-1, #005a8f);
   color: white;
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 </style>

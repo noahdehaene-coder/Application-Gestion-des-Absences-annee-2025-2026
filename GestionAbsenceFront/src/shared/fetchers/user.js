@@ -8,6 +8,36 @@ function getAuthHeader() {
 }
 
 /**
+ * Récupère l'utilisateur connecté en décodant le token stocké.
+ * Retourne un objet { id, name, ... } ou null si pas connecté.
+ */
+export function getUser() {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+        // On décode la partie "payload" du token JWT (le milieu de la chaîne)
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        
+        // On retourne un objet utilisateur propre
+        return {
+            id: payload.sub || payload.id,      // L'ID de l'utilisateur
+            name: payload.username || payload.name, // Le nom
+            role: payload.role
+        };
+    } catch (error) {
+        console.error("Erreur lors du décodage du token utilisateur :", error);
+        return null;
+    }
+}
+
+/**
  * Récupère la liste de tous les professeurs.
  */
 export async function fetchProfessors() {

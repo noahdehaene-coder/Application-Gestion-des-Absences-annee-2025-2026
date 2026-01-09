@@ -1,27 +1,66 @@
 <template>
-    <main class="left">
-        <h1>Appel pour {{ sessionTypeName }} {{ courseName }}</h1>
-        <div>
-            <h2>{{ groupName }}</h2>
-            <div class="search-container">
-                <SearchIcon class="search-icon" />
-                <input class="search-bar" type="search" v-model="searchQuery" placeholder="Rechercher un.e étudiant.e">
-            </div>
-            <button id="select-all" class="button" @click="selectAll">
-                {{ allSelected ? "Déselectionner tou.te.s" : "Sélectionner tou.te.s" }}
-            </button>
-            <ul class="list-presence">
-                <li v-for="student in filteredStudents" :key="student.id">
-                    <div class="student-list-container">
-                        <div class="student-info">
-                            <input type="checkbox" :value="student.id" v-model="presentStudentsId">
-                            <label>{{ student.name }}</label>
+    <main class="page-layout">
+        
+        <div class="main-call-area">
+            <h1>Appel pour {{ sessionTypeName }} {{ courseName }}</h1>
+            <div>
+                <h2>{{ groupName }}</h2>
+                
+                <div class="search-container">
+                    <SearchIcon class="search-icon" />
+                    <input class="search-bar" type="search" v-model="searchQuery" placeholder="Rechercher un.e étudiant.e">
+                </div>
+
+                <button id="select-all" class="button" @click="selectAll">
+                    {{ allSelected ? "Déselectionner tou.te.s" : "Sélectionner tou.te.s" }}
+                </button>
+
+                <ul class="list-presence">
+                    <li v-for="student in filteredStudents" :key="student.id">
+                        <div class="student-list-container">
+                            <div class="student-info">
+                                <input type="checkbox" :value="student.id" v-model="presentStudentsId">
+                                <label>
+                                    {{ student.name }}
+                                    <span v-if="student.isExtra" class="extra-badge">(Invité)</span>
+                                </label>
+                            </div>
                         </div>
+                    </li>
+                </ul>
+            </div>
+            <button v-if="!callSaved" id="btn-save" class="button" @click="saveCallAndGoBack">Sauvegarder l'appel</button>
+
+            <aside class="sidebar-students">
+            <h3>Ajouter un étudiant</h3>
+            
+            <div class="search-container sidebar-search">
+                <SearchIcon class="search-icon" />
+                <input class="search-bar" type="text" v-model="sidebarSearch" placeholder="Nom ou numéro...">
+            </div>
+
+            <div class="other-students-list">
+                <div 
+                    v-for="student in filteredOtherStudents" 
+                    :key="student.id" 
+                    class="sidebar-student-item"
+                >
+                    <div class="student-details">
+                        <span class="student-name">{{ student.name }}</span>
+                        <span class="student-num">{{ student.student_number }}</span>
                     </div>
-                </li>
-            </ul>
+                    <button class="add-btn" @click="addStudentToCall(student)">+</button>
+                </div>
+                
+                <p v-if="filteredOtherStudents.length === 0" class="no-result">
+                    {{ otherStudents.length === 0 ? 'Pas d\'autre étudiant' : 'Aucun résultat' }}
+                </p>
+            </div>
+        </aside>
         </div>
-        <button v-if="!callSaved" id="btn-save" class="button" @click="saveCallAndGoBack">Sauvegarder l'appel</button>
+
+        
+
     </main>
 </template>
 
@@ -29,72 +68,116 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
-import { getStudentsByGroupId } from '@/shared/fetchers/students';
+import { getStudentsByGroupId, getStudentsSameOtherGroup } from '@/shared/fetchers/students'; // Import de la fonction existante
 import { postSlot, searchSlot } from '@/shared/fetchers/slots';
-import { updateAbsences, getAbsencesBySlotId } from '@/shared/fetchers/presence';
+import { getAbsencesBySlotId, updateAbsences } from '@/shared/fetchers/presence';
 
-const studentsInGroup = ref([]); 
-const searchQuery = ref("");
-const route = useRoute();
 const router = useRouter();
+const route = useRoute();
 
+const groupId = parseInt(route.params.groupId);
 const groupName = route.params.groupName;
-const groupId = Number(route.params.groupId);
-const sessionTypeName = route.params.sessionTypeName;
-const sessionTypeGlobalId = Number(route.params.sessionTypeGlobalId);
 const courseName = route.params.courseName;
+const sessionTypeName = route.params.sessionTypeName;
+const sessionTypeGlobalId = parseInt(route.params.sessionTypeGlobalId);
 const date = route.params.date;
+const startTimeParam = route.params.startTime;
+const endTimeParam = route.params.endTime;
 
-const slot = ref(null);
+const students = ref([]);
 const presentStudentsId = ref([]);
-const allSelected = ref(false);
+const searchQuery = ref("");
 const callSaved = ref(false);
+const slot = ref(null);
+
+// --- NOUVELLES VARIABLES POUR LA COLONNE DE DROITE ---
+const otherStudents = ref([]); // Liste complète des autres étudiants
+const sidebarSearch = ref(""); // Recherche colonne de droite
 
 onMounted(async () => {
-    studentsInGroup.value = await getStudentsByGroupId(groupId);
-    
-    const existingSlot = await searchSlot(groupId, courseName, sessionTypeGlobalId, date);
-    
-    if (existingSlot) {
-        slot.value = existingSlot;
+    // 1. Initialisation de l'appel principal (VOTRE CODE EXISTANT)
+    const slotData = await searchSlot(groupId, courseName, sessionTypeGlobalId, date);
+    if (slotData) {
+        slot.value = slotData;
+        const [studentsData, presenceData] = await Promise.all([
+            getStudentsByGroupId(groupId),
+            getAbsencesBySlotId(slotData.id)
+        ]);
+        students.value = studentsData;
         
-        const existingAbsences = await getAbsencesBySlotId(slot.value.id);
-        const absentIds = existingAbsences.map(p => p.student_id);
-        
-        presentStudentsId.value = studentsInGroup.value
-            .filter(student => !absentIds.includes(student.id))
-            .map(student => student.id);
+        // On coche ceux qui NE SONT PAS dans la liste des absents
+        const absentIds = presenceData.map(p => p.student_id);
+        presentStudentsId.value = studentsData
+            .filter(s => !absentIds.includes(s.id))
+            .map(s => s.id);
             
     } else {
-        slot.value = null;
-        selectAll(); 
+        students.value = await getStudentsByGroupId(groupId);
+        // Par défaut tout le monde présent ? (Selon votre logique actuelle, case vide = absent ?)
+        // Dans votre template 'list-presence', vous cochez 'presentStudentsId'.
+        // Si vous voulez tout le monde présent par défaut :
+        // presentStudentsId.value = students.value.map(s => s.id);
+    }
+
+    // 2. Chargement des étudiants des AUTRES groupes (POUR LA COLONNE DE DROITE)
+    if (groupId) {
+        const others = await getStudentsSameOtherGroup(groupId);
+        // On s'assure qu'on n'affiche pas ceux qui sont déjà dans la liste principale
+        otherStudents.value = others.filter(s => !students.value.some(inList => inList.id === s.id));
     }
 });
 
-const filteredStudents = computed(() =>
-    studentsInGroup.value.filter(s =>
-        s.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-);
+// --- LOGIQUE EXISTANTE ---
+const filteredStudents = computed(() => {
+    return students.value.filter(student => 
+        student.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+});
 
-const absentStudentsId = computed(() =>
-    studentsInGroup.value
-        .map(student => student.id)
-        .filter(id => !presentStudentsId.value.includes(id))
-);
+const allSelected = computed(() => {
+    return filteredStudents.value.length > 0 && 
+           filteredStudents.value.every(student => presentStudentsId.value.includes(student.id));
+});
 
-function selectAll() { 
-    const studentsIdInGroup = studentsInGroup.value.map(student => student.id);
-    if (!allSelected.value) {
-        presentStudentsId.value = studentsIdInGroup.slice();
-    } else {
+function selectAll() {
+    if (allSelected.value) {
         presentStudentsId.value = [];
+    } else {
+        presentStudentsId.value = filteredStudents.value.map(s => s.id);
     }
-    allSelected.value = !allSelected.value;
 }
 
-const startTimeParam = route.params.startTime;
-const endTimeParam = route.params.endTime;
+// --- NOUVELLE LOGIQUE : FILTRE COLONNE DE DROITE ---
+const filteredOtherStudents = computed(() => {
+    const search = sidebarSearch.value.toLowerCase();
+    return otherStudents.value.filter(s => {
+        // On masque ceux qu'on a déjà ajoutés à la liste de gauche
+        if (students.value.some(existing => existing.id === s.id)) return false;
+        
+        return s.name.toLowerCase().includes(search) || 
+               (s.student_number && s.student_number.toString().includes(search));
+    });
+});
+
+// --- NOUVELLE LOGIQUE : AJOUTER UN ÉTUDIANT ---
+function addStudentToCall(studentToAdd) {
+    // 1. On l'ajoute à la liste de gauche
+    students.value.push({
+        ...studentToAdd,
+        isExtra: true // Pour le style
+    });
+    
+    // 2. On le marque présent par défaut (coché)
+    presentStudentsId.value.push(studentToAdd.id);
+    
+    // (Il disparaîtra automatiquement de la liste de droite grâce au computed filter)
+}
+
+const absentStudentsId = computed(() => {
+    return students.value
+        .filter(student => !presentStudentsId.value.includes(student.id))
+        .map(student => student.id);
+});
 
 async function saveCallAndGoBack() {
     if (!slot.value) {
@@ -106,7 +189,6 @@ async function saveCallAndGoBack() {
             start_time: startTimeParam || date, 
             end_time: endTimeParam || date
         };
-
         slot.value = await postSlot(slotData);
     }
     
@@ -120,11 +202,46 @@ async function saveCallAndGoBack() {
 <style scoped>
 @import url("../shared/shared.css");
 
+/* MISE EN PAGE GLOBALE (Flexbox) */
+.page-layout {
+    display: flex;
+    gap: 2rem; /* Espace entre les deux colonnes */
+    align-items: flex-start; /* Aligne en haut */
+    max-width: 1200px; /* Plus large pour accueillir la sidebar */
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Colonne Gauche (Principale) */
+.main-call-area {
+    flex: 0.5; /* Prend 2/3 de l'espace */
+}
+
+/* Colonne Droite (Sidebar) */
+.sidebar-students {
+    flex: 1; /* Prend 1/3 de l'espace */
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 20px; /* Reste visible au scroll */
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.h3{
+    text-align: center;
+}
+
+/* STYLES EXISTANTS (Conservés) */
 #select-all { margin-bottom: 1rem; }
 
 .list-presence {
     list-style-type: none;
-    width: 35%;
+    width: 100%; /* Adapté à la largeur du conteneur parent */
     font-size: 1rem;
     padding-left: 0;
 }
@@ -141,26 +258,129 @@ input[type="checkbox"] {
     -moz-appearance: none;
     border: 1px solid black;
     border-radius: 5px;
-    background-color: var(--color-5);
-    cursor: pointer;
-    height: 1.5rem;
+    background-color: var(--color-6);
     width: 1.5rem;
-}
-
-input[type="checkbox"]:hover {
-    background-color: var(--color-3);
+    height: 1.5rem;
+    margin-right: 10px;
+    cursor: pointer;
 }
 
 input[type="checkbox"]:checked {
-    background-color: var(--color-2);
+    background-color: #27ae60;
+    border-color: #27ae60;
+    position: relative;
 }
 
 input[type="checkbox"]:checked::after {
-    content: '✓';
-    display: block;
-    text-align: center;
-    font-size: 16px;
-    color: var(--color-6);
+    content: '✔';
+    color: white;
+    font-size: 1rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.student-list-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.search-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+}
+
+.search-bar {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 1rem;
+}
+
+/* NOUVEAUX STYLES POUR LA SIDEBAR */
+.sidebar-desc {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.sidebar-search {
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+.other-students-list {
+    overflow-y: auto; /* Scroll si la liste est longue */
+    flex: 1;
+}
+
+.sidebar-student-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    background: #fdfdfd;
+}
+
+.sidebar-student-item:hover {
+    background: #f0f8ff;
+}
+
+.student-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.student-name { font-weight: bold; font-size: 0.9rem; }
+.student-num { font-size: 0.8rem; color: #888; }
+
+.add-btn {
+    background-color: var(--color-1, #005a8f);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    cursor: pointer;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-btn:hover { background-color: #004066; }
+
+.extra-badge {
+    font-size: 0.8rem;
+    color: #e67e22;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.no-result {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    margin-top: 1rem;
 }
 </style>

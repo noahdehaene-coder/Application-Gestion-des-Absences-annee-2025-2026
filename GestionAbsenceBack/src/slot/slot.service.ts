@@ -253,6 +253,7 @@ export class SlotService {
 
     const sessionType = await this.prisma.session_type.findUnique({
       where: {
+        id: Number(groupId),
         sessionTypeGlobalId_course_material_id: {
           sessionTypeGlobalId: sessionTypeGlobalId,
           course_material_id: course.id,

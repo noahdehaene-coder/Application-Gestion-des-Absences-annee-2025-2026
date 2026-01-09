@@ -44,7 +44,7 @@
     <hr v-if="recentCalls.length > 0" />
 
     <div v-if="recentCalls.length > 0" class="recent-calls-section">
-      <h2>Relancer un appel récent</h2>
+      <h2>Lancer un appel</h2>
       <p class="info-text">Cliquez sur un modèle pour créer un appel aujourd'hui. N'oubliez pas de modifier les horaires si nécessaire.</p>
       
       <div class="recent-calls-list">

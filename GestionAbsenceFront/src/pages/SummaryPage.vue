@@ -105,9 +105,10 @@ function formatDate(date) {
 }
 
 function generateCSV(abs, filename) {
-  const headers = ['Cours', 'Date', 'Numéro étudiant', 'Nom et Prénom'];
+  const headers = ['Session', 'Cours', 'Date', 'Numéro étudiant', 'Nom et Prénom'];
   const rows = abs.map(abs => [
-    `${abs.session_type} ${abs.course_material}`,
+    abs.session_type,
+    abs.course_material,
     formatDate(abs.date),
     abs.student_number,
     abs.name

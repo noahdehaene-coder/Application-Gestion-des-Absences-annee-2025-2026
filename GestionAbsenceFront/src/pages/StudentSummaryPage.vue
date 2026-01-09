@@ -54,7 +54,7 @@
               >
                 📄 Voir le PDF
               </button>
-              <span v-else class="no-file">-</span>
+              <span v-else class="no-file">Pas de justificatif</span>
             </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">

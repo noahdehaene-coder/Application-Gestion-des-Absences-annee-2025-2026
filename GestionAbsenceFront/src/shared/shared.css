@@ -167,8 +167,8 @@ button:not(.router-link):not([type="checkbox"]):not([type="radio"]):not(.promo-s
 
 .button:hover,
 .button:focus,
-button:not(.router-link):not([type="checkbox"]):not([type="radio"]):not(.promo-selector-btn):hover,
-button:not(.router-link):not([type="checkbox"]):not([type="radio"]):not(.promo-selector-btn):focus {
+button:not(.router-link):not([type="checkbox"]):not([type="radio"]):not(.promo-selector-btn):not(.semester-link):hover,
+button:not(.router-link):not([type="checkbox"]):not([type="radio"]):not(.promo-selector-btn):not(.semester-link):focus {
     background-color: #FFA733;
     transform: scale(1.05);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);

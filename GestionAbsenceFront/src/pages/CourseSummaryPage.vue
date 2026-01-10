@@ -1,5 +1,5 @@
 <template>
-  <main class="left" v-if="courseName !== 'Chargement...'">
+  <main class="left" v-if="!isLoading">
     <div class="header">
       <h1>Récapitulatif des absences en {{ courseName }}</h1>
     </div>
@@ -22,7 +22,7 @@
       </div>
     </div>
     <div class="table-container">
-      <table>
+      <table v-if="filteredAbsences.length > 0">
         <thead>
           <tr>
             <th>Date</th>
@@ -50,6 +50,9 @@
           </tr>
         </tbody>
       </table>
+      <div v-else class="no-absences-message">
+        <p>Aucune absence enregistrée pour cette matière.</p>
+      </div>
     </div>
   </main>
   
@@ -70,7 +73,8 @@ import { updatePresenceJustification } from '@/shared/fetchers/presence';
 
 const route = useRoute();
 const courseId = Number(route.params.id); 
-const courseName = ref("Chargement...");
+const courseName = ref("Inconnue");
+const isLoading = ref(true);
 
 const selectedSessionTypes = ref([]);
 
@@ -92,6 +96,7 @@ const uniqueSessionTypes = computed(() => {
 onMounted(async () => {
   if (isNaN(courseId)) {
     console.error("ID de cours invalide");
+    isLoading.value = false;
     return;
   }
   
@@ -101,10 +106,12 @@ onMounted(async () => {
   if (absencesList.value.length > 0) {
     courseName.value = absencesList.value[0].course_material;
   } else if (studentsList.value.length > 0) {
-
+    courseName.value = route.params.name || "Inconnue";
   } else {
-    courseName.value = "Inconnue";
+    courseName.value = route.params.name || "Inconnue";
   }
+  
+  isLoading.value = false;
 });
 
 async function toggleJustification(absence) {
@@ -229,6 +236,13 @@ tbody tr:nth-child(even) {
 
 .is-unjustified {
   color: #c0392b; /* Rouge */
+}
+
+.no-absences-message {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
 }
 
 .session-type-filter label { font-weight: bold; display: block; margin-bottom: 0.5rem; }

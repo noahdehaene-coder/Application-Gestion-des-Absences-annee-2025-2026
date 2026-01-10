@@ -5,10 +5,10 @@
     
     <nav class="admin-nav">
       <router-link :to="{ name: 'ManageProfessors' }">
-        Gérer les Professeurs
+        Gérer les Professeur·e·s
       </router-link>
       <router-link :to="{ name: 'StudentsManagement' }">
-        Gérer les Étudiants
+        Gérer les Étudiant·e·s
       </router-link>
       </nav>
     
@@ -51,8 +51,13 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.admin-nav a:hover {
+.admin-nav a:hover,
+.admin-nav a:focus {
   background-color: var(--color-5, #f0f0f0);
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  outline: 2px solid #254e70ff;
+  outline-offset: 2px;
 }
 
 /* Style pour le lien de la page active */

@@ -1,4 +1,4 @@
-<!--Page de sélection du professeur-->
+<!--Page de sélection du·de la professeur·e-->
 <!--Page non utilisée-->
 <template>
     <main class="center">

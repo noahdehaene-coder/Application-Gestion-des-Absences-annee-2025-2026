@@ -2,12 +2,12 @@
 <template>
     <main class="center">
         <div class="promos">
-            <button class="" v-for="promo in promos" :key="promo" :class="{ active: promo === selectedPromo }">
+            <button class="promo-selector-btn" v-for="promo in promos" :key="promo" :class="{ active: promo === selectedPromo }">
                 {{ promo }}
             </button>
         </div>
         <div class="selector">
-            <button v-for="semester in semesters" :key="semester.id" @click="selectPromo(semester)"
+            <button class="promo-selector-btn" v-for="semester in semesters" :key="semester.id" @click="selectPromo(semester)"
                 :class="{ active: semester.name === selectedSemester }">
                 {{ semester.name }}
             </button>
@@ -28,7 +28,7 @@ const promos = ['L1', 'L2', 'L3']
 const selectedPromo = ref('L1')
 
 const semesters = ref([]);
-const selectedSemester = ref(props.modelValue || semesters.value[0].name)
+const selectedSemester = ref(props.modelValue || 'S1')
 
 /**Pour charger les données de manière asynchrone */
 onMounted(async () => {

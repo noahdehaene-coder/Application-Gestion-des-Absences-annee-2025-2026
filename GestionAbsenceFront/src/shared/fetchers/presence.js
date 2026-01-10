@@ -142,6 +142,7 @@ export async function deletePresences() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des inscriptions:", error);
+        throw error;
     }
 }
 

@@ -1,7 +1,13 @@
 <!--Page de sélection d'un groupe pour le modifier-->
 <template>
   <main class="left">
-    <h1>Sélectionner le groupe à modifier</h1>
+    <div class="page-header">
+      <h1>Sélectionner le groupe à modifier</h1>
+      
+      <RouterLink to="/modification/groupe/0" class="btn-add">
+        + Créer un groupe
+      </RouterLink>
+    </div>
 
     <div class="sections-container">
       <div class="section">
@@ -91,4 +97,32 @@ const filteredGroupsL3 = computed(() =>
 
 <style scoped>
 @import url("../shared/shared.css");
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-right: 1rem;
+}
+
+.btn-add {
+  background-color: var(--color-2);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-add:hover {
+  opacity: 0.9;
+  background-color: var(--color-1);
+}
+
+.btn-add:active {
+  transform: translateY(1px);
+}
 </style>

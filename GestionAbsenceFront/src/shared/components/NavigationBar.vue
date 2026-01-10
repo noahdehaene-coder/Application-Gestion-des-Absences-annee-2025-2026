@@ -1,7 +1,7 @@
 <template>
   <nav class="navigation-bar">
     
-    <a @click="handleTitleClick" class="title-navigation-bar" style="cursor: pointer;">
+    <a @click="goHome" class="title-navigation-bar" style="cursor: pointer;">
       Gestion des Absences MIASHS
     </a>
     
@@ -10,11 +10,11 @@
       <RouterLink to="/selection/etudiant" class="modification-navigation">Modifier étudiant.e</RouterLink>
       <RouterLink to="/selection/groupe" class="modification-navigation">Modifier groupe</RouterLink>
       
-      <button @click="handleTitleClick" class="button logout-button">Déconnexion</button>
+      <button @click="handleLogout" class="button logout-button">Déconnexion</button>
     </div>
 
     <div class="navigation-router-link" v-else-if="isAuthenticated">
-       <button @click="handleTitleClick" class="button logout-button">Déconnexion</button>
+       <button @click="handleLogout" class="button logout-button">Déconnexion</button>
     </div>
 
     </nav>
@@ -34,13 +34,21 @@ const userRole = computed(() => auth.userRole.value);
 
 
 /**
- * Déconnecte l'utilisateur (s'il est connecté)
- * et le redirige vers la page de connexion.
+ * Redirige vers la page d'accueil (tableau de bord selon le rôle).
  */
-function handleTitleClick() {
-  if (isAuthenticated.value) { 
-    auth.logout();
+function goHome() {
+  if (userRole.value === 'GESTIONNAIRE') {
+    router.push({ name: 'AdminDashboard' });
+  } else {
+    router.push({ name: 'ProfessorDashboard' });
   }
+}
+
+/**
+ * Déconnecte l'utilisateur et le redirige vers la page de connexion.
+ */
+function handleLogout() {
+  auth.logout();
   router.push({ name: 'Login' });
 }
 </script>
@@ -108,9 +116,13 @@ function handleTitleClick() {
 }
 
 .modification-navigation,
-.students-management,
+.students-management {
+  background-color: var(--color-4);
+}
+
 .logout-button {
   background-color: var(--color-4);
+  transition: all 0.15s ease;
 }
 
 /* Effet au survol */
@@ -121,8 +133,16 @@ function handleTitleClick() {
 .summary-navigation:hover,
 .modification-navigation:hover,
 .students-management:hover,
-.drop-down-btn:hover,
-.logout-button:hover {
+.drop-down-btn:hover {
   background-color: var(--color-5);
+}
+
+.logout-button:hover,
+.logout-button:focus {
+  background-color: var(--color-5);
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  outline: 2px solid #254e70ff;
+  outline-offset: 2px;
 }
 </style>

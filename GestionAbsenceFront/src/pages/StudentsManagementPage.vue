@@ -7,7 +7,7 @@
 
             <div>
                 <button class="button" id="refresh-ade-btn" @click="refreshADE">Supprimer les matières</button>
-                <button class="button" id="refresh-bdd-btn" @click="viderBDD">Supprimer les étudiants et les groupes</button>
+                <button class="button" id="refresh-bdd-btn" @click="viderBDD">Supprimer les étudiant·e·s et les groupes</button>
             </div>
         </div>
 
@@ -19,7 +19,10 @@
                     selectedSemesterForStudents }} :</label>
                 <input type="file" accept=".csv" class="file-upload" :id="'upload-' + selectedSemesterForStudents"
                     @change="fileChange($event, selectedSemesterForStudents)" ref="studentFileInput">
-                <button type="submit" class="button">Envoyer le fichier</button>
+                <button type="submit" class="button" :disabled="loadingStudents">
+                    <span v-if="loadingStudents" class="loader"></span>
+                    <span v-else>Envoyer le fichier</span>
+                </button>
             </div>
         </form>
 
@@ -37,7 +40,10 @@
                     groupe :</label>
                 <input type="file" accept=".csv" class="file-upload" :id="'upload-' + selectedSemesterForGroups"
                     @change="fileChange($event, selectedSemesterForGroups)" ref="groupFileInput">
-                <button type="submit" class="button">Envoyer le fichier</button>
+                <button type="submit" class="button" :disabled="loadingGroups">
+                    <span v-if="loadingGroups" class="loader"></span>
+                    <span v-else>Envoyer le fichier</span>
+                </button>
             </div>
         </form>
     </main>
@@ -54,22 +60,32 @@ import { deleteCourseMaterial } from '@/shared/fetchers/course_material';
 import { deleteSlots } from '@/shared/fetchers/slots';
 import { deletePresences } from '@/shared/fetchers/presence';
 
-function refreshADE() {
+async function refreshADE() {
     const confirmRefresh = window.confirm("⚠️ Cette action va supprimer les matières et leurs données de la BDD. Vous ne pourrez pas revenir en arrière ! Êtes-vous sûr.e ?");
     if (confirmRefresh) {
-        deleteCourseMaterial();
-        deleteSessionType();
+        try {
+            await deleteCourseMaterial();
+            await deleteSessionType();
+            alert("✅ Matières supprimées avec succès !");
+        } catch (error) {
+            alert("❌ Erreur lors de la suppression : " + error.message);
+        }
     }
 }
 
-function viderBDD() {
-    const confirmRefresh = window.confirm("⚠️ Cette action va supprimer les étudiants et les groupes de la BDD. Vous ne pourrez pas revenir en arrière ! Êtes-vous sûr.e ?");
+async function viderBDD() {
+    const confirmRefresh = window.confirm("⚠️ Cette action va supprimer les étudiant·e·s et les groupes de la BDD. Vous ne pourrez pas revenir en arrière ! Êtes-vous sûr·e ?");
     if (confirmRefresh) {
-        deleteInscriptions();
-        deletePresences();
-        deleteStudents();
-        deleteSlots();
-        deleteGroups();
+        try {
+            await deleteInscriptions();
+            await deletePresences();
+            await deleteStudents();
+            await deleteSlots();
+            await deleteGroups();
+            alert("✅ Base de données vidée avec succès !");
+        } catch (error) {
+            alert("❌ Erreur lors du vidage : " + error.message);
+        }
     }
 }
 
@@ -80,6 +96,8 @@ const selectedSemesterForGroups = ref('S1')
 const uploadedFiles = reactive({})
 const studentFileInput = ref(null);
 const groupFileInput = ref(null);
+const loadingStudents = ref(false);
+const loadingGroups = ref(false);
 
 function fileChange(event, semester) {
     const file = event.target.files[0]
@@ -97,6 +115,7 @@ async function submitStudents() {
         return;
     }
 
+    loadingStudents.value = true;
     try {
         await postStudentsCSV(fichier);
 
@@ -109,14 +128,16 @@ async function submitStudents() {
 
         await postInscriptionsCSV(newGroup.id, fichier);
 
-        alert(`Succès ! Les étudiants ont été importés et le groupe "${groupName}" a été créé avec ses inscrits.`);
+        alert(`Succès ! Les étudiant·e·s ont été importé·e·s et le groupe "${groupName}" a été créé avec ses inscrit·e·s.`);
 
         studentFileInput.value.value = '';
         uploadedFiles[selectedSemesterForStudents.value] = null;
 
     } catch (error) {
         console.error("Erreur lors de l'importation complète : ", error);
-        alert("Une erreur est survenue. Vérifiez si le groupe n'existe pas déjà ou si le fichier est valide.");
+        alert("❌ Erreur : " + (error.message || "Une erreur est survenue lors de l'importation"));
+    } finally {
+        loadingStudents.value = false;
     }
 }
 
@@ -130,10 +151,10 @@ async function createGroup() {
     }
     try {
         createdGroup.value = await postGroupWithSemesterName(selectedSemesterForGroups.value, groupName.value);
-        alert("Groupe créé avec succès !");
+        alert("✅ Groupe créé avec succès !");
     } catch (error) {
         console.error("Erreur lors de la création du groupe : ", error);
-        alert("Echec de la création du groupe.");
+        alert("❌ Erreur : " + (error.message || "Echec de la création du groupe"));
     }
 }
 
@@ -148,12 +169,21 @@ async function submitGroup() {
         alert("Veuillez sélectionner un fichier CSV.");
         return;
     }
-    await postInscriptionsCSV(createdGroup.value.id, fichier);
-    alert("Fichier envoyé avec succès.");
+    
+    loadingGroups.value = true;
+    try {
+        await postInscriptionsCSV(createdGroup.value.id, fichier);
+        alert("✅ Fichier envoyé avec succès.");
 
-    groupFileInput.value.value = '';
-    uploadedFiles[selectedSemesterForGroups.value] = null;
-    groupName.value = '';
+        groupFileInput.value.value = '';
+        uploadedFiles[selectedSemesterForGroups.value] = null;
+        groupName.value = '';
+    } catch (error) {
+        console.error("Erreur lors de l'envoi du fichier : ", error);
+        alert("❌ Erreur : " + (error.message || "Échec de l'envoi du fichier"));
+    } finally {
+        loadingGroups.value = false;
+    }
 }
 </script>
 
@@ -220,5 +250,30 @@ async function submitGroup() {
 .button {
     align-self: center;
     width: max-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-top: 2px solid black;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

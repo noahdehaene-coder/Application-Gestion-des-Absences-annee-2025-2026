@@ -32,7 +32,7 @@
               </div>
             </RouterLink>
           </li>
-          <li v-if="filteredL1.length === 0" class="empty-msg">Aucun étudiant trouvé.</li>
+          <li v-if="filteredL1.length === 0" class="empty-msg">Aucun·e étudiant·e trouvé·e.</li>
         </ul>
       </div>
 
@@ -54,7 +54,7 @@
               </div>
             </RouterLink>
           </li>
-          <li v-if="filteredL2.length === 0" class="empty-msg">Aucun étudiant trouvé.</li>
+          <li v-if="filteredL2.length === 0" class="empty-msg">Aucun·e étudiant·e trouvé·e.</li>
         </ul>
       </div>
 
@@ -76,7 +76,7 @@
               </div>
             </RouterLink>
           </li>
-          <li v-if="filteredL3.length === 0" class="empty-msg">Aucun étudiant trouvé.</li>
+          <li v-if="filteredL3.length === 0" class="empty-msg">Aucun·e étudiant·e trouvé·e.</li>
         </ul>
       </div>
 

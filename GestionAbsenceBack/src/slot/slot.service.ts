@@ -158,11 +158,15 @@ export class SlotService {
     });
   }
 
-  async getRecentCalls(professorId: number) {
+  async getRecentCalls(professorId: number, dayOfWeek?: number) {
+    const whereClause: any = { professorId: professorId };
+    
+    // Si un jour de la semaine est spécifié, filtrer uniquement les slots de ce jour
+    // dayOfWeek: 0=dimanche, 1=lundi, 2=mardi, 3=mercredi, 4=jeudi, 5=vendredi, 6=samedi
     const recentSlots = await this.prisma.slot.findMany({
-      where: { professorId: professorId },
+      where: whereClause,
       orderBy: { date: 'desc' },
-      take: 20, 
+      take: 100, // Récupérer plus de slots pour avoir assez après filtrage 
       include: {
         slot_group: { select: { name: true } },
         slot_session_type: {
@@ -181,8 +185,13 @@ export class SlotService {
       },
     });
 
+    // Filtrer par jour de la semaine si spécifié
+    const filteredSlots = dayOfWeek !== undefined 
+      ? recentSlots.filter(slot => new Date(slot.date).getDay() === dayOfWeek)
+      : recentSlots;
+
     const uniqueTemplates = new Map();
-    for (const slot of recentSlots) {
+    for (const slot of filteredSlots) {
       if (!slot.slot_group || !slot.slot_session_type || !slot.slot_session_type.session_type_course_material || !slot.slot_session_type.sessionTypeGlobal) {
         continue; 
       }
@@ -201,6 +210,8 @@ export class SlotService {
           courseName: courseName,
           sessionType: sessionType,
           sessionTypeGlobalId: sessionTypeGlobalId,
+          start_time: slot.start_time, // Conserver l'horaire
+          end_time: slot.end_time,     // Conserver l'horaire
           displayText: `${courseName} (${sessionType}) - ${groupName}`,
         });
       }

@@ -110,7 +110,7 @@ function formatTime(isoString) {
 }
 
 function generateCSV(abs, filename) {
-  const headers = ['Session', 'Cours', 'Date','Heure', 'Numéro étudiant', 'Nom et Prénom'];
+  const headers = ['Session', 'Cours', 'Date','Heure', 'Numéro étudiant·e', 'Nom et Prénom'];
   const rows = abs.map(abs => {
     // Calcul de la chaine horaire (ex: "08:00 - 10:00")
     let timeStr = "Non défini";

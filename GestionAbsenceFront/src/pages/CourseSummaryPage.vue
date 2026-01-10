@@ -8,7 +8,7 @@
       
       <div class="search-container">
         <SearchIcon class="search-icon" />
-        <input type="search" v-model="searchQuery" placeholder="Rechercher un.e étudiant.e" class="search-bar" />
+        <input type="search" v-model="searchQuery" placeholder="Rechercher un·e étudiant·e" class="search-bar" />
       </div>
 
       <div class="session-type-filter">
@@ -26,7 +26,7 @@
         <thead>
           <tr>
             <th>Date</th>
-            <th>Étudiant.e</th>
+            <th>Étudiant·e</th>
             <th>Type de Session</th>
             <th>Absence</th>
           </tr>

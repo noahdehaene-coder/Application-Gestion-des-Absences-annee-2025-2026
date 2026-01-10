@@ -147,5 +147,6 @@ export async function deleteGroups() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des groupes:", error);
+        throw error;
     }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, Req, BadRequestException} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, Req, Query, BadRequestException} from '@nestjs/common';
 import { SlotService } from './slot.service';
 import { CreateSlotDto } from './dto/create-slot-by-session.dto';
 import { CreateSlotBySessionDto } from './dto/create-slot.dto';
@@ -15,12 +15,13 @@ export class SlotController {
 
   @Get('recent-calls')
   @ApiOperation({ summary: 'Récupérer les modèles d\'appels récents pour le professeur connecté' })
-  async getRecentCalls(@Req() req: any) {
+  async getRecentCalls(@Req() req: any, @Query('dayOfWeek') dayOfWeek?: string) {
     const professorId = Number(req.user?.id); 
     if (isNaN(professorId) || professorId <= 0) { 
         throw new BadRequestException('Professor ID is missing or invalid in the token payload.');
     }
-    return this.slotService.getRecentCalls(professorId);
+    const dayOfWeekNum = dayOfWeek ? Number(dayOfWeek) : undefined;
+    return this.slotService.getRecentCalls(professorId, dayOfWeekNum);
   }
 
   @Get(':id')

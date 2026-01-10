@@ -170,6 +170,7 @@ export async function deleteStudents() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des étudiant.e.s:", error);
+        throw error;
     }
 }
 

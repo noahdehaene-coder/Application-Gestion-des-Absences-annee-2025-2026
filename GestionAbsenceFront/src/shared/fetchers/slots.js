@@ -57,8 +57,9 @@ export async function postSlot(slotData) {
 
 /**
  * Récupère les modèles d'appels récents pour le professeur connecté.
+ * @param {number} dayOfWeek - Jour de la semaine (0=dimanche, 1=lundi, etc.) optionnel
  */
-export async function fetchRecentCalls() {
+export async function fetchRecentCalls(dayOfWeek = null) {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -66,7 +67,11 @@ export async function fetchRecentCalls() {
       return []; 
     }
 
-    const response = await fetch(`http://localhost:3000/slot/recent-calls`, {
+    const url = dayOfWeek !== null 
+      ? `http://localhost:3000/slot/recent-calls?dayOfWeek=${dayOfWeek}`
+      : `http://localhost:3000/slot/recent-calls`;
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeader(),
     });
@@ -108,6 +113,7 @@ export async function deleteSlots() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des créneaux:", error);
+        throw error;
     }
 }
 

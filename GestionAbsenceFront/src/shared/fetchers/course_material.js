@@ -79,5 +79,6 @@ export async function deleteCourseMaterial() {
         }
     } catch (error) {
         console.error(error);
+        throw error;
     }
 }

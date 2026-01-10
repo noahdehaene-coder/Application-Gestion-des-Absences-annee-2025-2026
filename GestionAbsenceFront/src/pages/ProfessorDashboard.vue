@@ -1,6 +1,6 @@
 <template>
   <main class="left dashboard-container">
-    <h1>Tableau de bord Professeur</h1>
+    <h1>Tableau de bord Professeur·e</h1>
     <p>Bienvenue sur votre espace de gestion des absences.</p>
 
     <div class="create-call-section">
@@ -96,8 +96,42 @@ const recentCalls = ref([]);
 const todayCalls = ref([]);
 const isLoading = ref(true);
 
+/**
+ * Arrondit l'heure actuelle au quart d'heure le plus proche
+ * et retourne un objet avec start et end (+1h30)
+ */
+function getRoundedTimeDefaults() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  
+  // Arrondir au quart d'heure le plus proche (0, 15, 30, 45)
+  let roundedMinutes;
+  if (minutes < 8) roundedMinutes = 0;
+  else if (minutes < 23) roundedMinutes = 15;
+  else if (minutes < 38) roundedMinutes = 30;
+  else if (minutes < 53) roundedMinutes = 45;
+  else {
+    roundedMinutes = 0;
+    now.setHours(now.getHours() + 1);
+  }
+  
+  now.setMinutes(roundedMinutes);
+  now.setSeconds(0);
+  
+  const startTime = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  // Ajouter 1h30
+  now.setMinutes(now.getMinutes() + 90);
+  const endTime = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  return { startTime, endTime };
+}
+
 function getTimeFromIso(isoString) {
-  if (!isoString) return "08:00"; 
+  if (!isoString) {
+    const defaults = getRoundedTimeDefaults();
+    return defaults.startTime;
+  }
   const date = new Date(isoString);
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -116,15 +150,20 @@ onMounted(async () => {
       
       const today = new Date().toISOString().split('T')[0]; // Date YYYY-MM-DD
 
+      // Récupérer le jour de la semaine actuel (0 = dimanche, 1 = lundi, etc.)
+      const todayDayOfWeek = new Date().getDay();
+      
       const [rawRecentCalls, rawTodaySlots] = await Promise.all([
-        fetchRecentCalls(),
+        fetchRecentCalls(todayDayOfWeek),
         fetchSlotsByDate(today)
       ]);
       
+      const defaults = getRoundedTimeDefaults();
+      
       recentCalls.value = (rawRecentCalls || []).map(call => ({
         ...call,
-        inputStart: call.start_time ? getTimeFromIso(call.start_time) : "08:00",
-        inputEnd: call.end_time ? getTimeFromIso(call.end_time) : "10:00"
+        inputStart: call.start_time ? getTimeFromIso(call.start_time) : defaults.startTime,
+        inputEnd: call.end_time ? getTimeFromIso(call.end_time) : defaults.endTime
       }));
 
       todayCalls.value = rawTodaySlots || [];

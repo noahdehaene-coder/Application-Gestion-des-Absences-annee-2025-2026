@@ -90,5 +90,6 @@ export async function deleteSessionType() {
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des types de sessions:", error);
+        throw error;
     }
 }

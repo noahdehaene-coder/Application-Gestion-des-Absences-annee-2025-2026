@@ -58,7 +58,7 @@
             </td>
           </tr>
           <tr v-if="filteredAbsences.length === 0">
-            <td colspan="5" class="no-absences">Aucune absence trouvée pour cet.te étudiant.e.</td>
+            <td colspan="5" class="no-absences">Aucune absence trouvée pour cet·te étudiant·e.</td>
           </tr>
         </tbody>
       </table>
@@ -135,7 +135,7 @@ onMounted(async () => {
     if (student) {
       studentName.value = student.name;
     } else {
-      studentName.value = "Étudiant introuvable";
+      studentName.value = "Étudiant·e introuvable";
     }
 
     absencesList.value = await getStudentAbsencesById(studentId) || [];

@@ -159,13 +159,15 @@ export async function deleteInscriptionById(studentId, groupId) {
 export async function deleteInscriptions() {
     try {
         const response = await fetch(`http://localhost:3000/inscription`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: getAuthHeader()
         })
         if (!response.ok) {
             throw new Error("Erreur lors de la suppression des inscriptions");
         }
     } catch (error) {
         console.error("Erreur lors de la suppression des inscriptions:", error);
+        throw error;
     }
 }
 

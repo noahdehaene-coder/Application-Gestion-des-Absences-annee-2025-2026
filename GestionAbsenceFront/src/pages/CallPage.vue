@@ -34,7 +34,7 @@
 
             </div>
             <aside class="sidebar-students">
-            <h3>Ajouter un étudiant</h3>
+            <h3>Ajouter un·e étudiant·e</h3>
             
             <div class="search-container sidebar-search">
                 <SearchIcon class="search-icon" />
@@ -55,7 +55,7 @@
                 </div>
                 
                 <p v-if="filteredOtherStudents.length === 0" class="no-result">
-                    {{ otherStudents.length === 0 ? 'Pas d\'autre étudiant' : 'Aucun résultat' }}
+                    {{ otherStudents.length === 0 ? 'Pas d\'autre étudiant·e' : 'Aucun résultat' }}
                 </p>
             </div>
         </aside>
@@ -122,9 +122,11 @@ onMounted(async () => {
 });
 
 const filteredStudents = computed(() => {
-    return students.value.filter(student => 
+    const filtered = students.value.filter(student => 
         student.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     );
+    // Tri alphabétique par nom
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const allSelected = computed(() => {
@@ -142,12 +144,14 @@ function selectAll() {
 
 const filteredOtherStudents = computed(() => {
     const search = sidebarSearch.value.toLowerCase();
-    return otherStudents.value.filter(s => {
+    const filtered = otherStudents.value.filter(s => {
         if (students.value.some(existing => existing.id === s.id)) return false;
         
         return s.name.toLowerCase().includes(search) || 
                (s.student_number && s.student_number.toString().includes(search));
     });
+    // Tri alphabétique par nom
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
 });
 
 function addStudentToCall(studentToAdd) {
@@ -219,7 +223,26 @@ async function saveCallAndGoBack() {
     text-align: center;
 }
 
-#select-all { margin-bottom: 1rem; }
+#select-all { 
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+#select-all:hover, #select-all:focus {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 4px rgba(0, 90, 143, 0.3);
+    outline: 2px solid #005a8f;
+}
+
+#btn-save {
+    transition: all 0.2s ease;
+}
+
+#btn-save:hover, #btn-save:focus {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 4px rgba(0, 90, 143, 0.3);
+    outline: 2px solid #005a8f;
+}
 
 .list-presence {
     list-style-type: none;
@@ -232,6 +255,13 @@ async function saveCallAndGoBack() {
     background-color: var(--color-6);
     margin-bottom: 0.5rem;
     border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.list-presence>li:focus-within {
+    background-color: #e3f2fd;
+    border: 2px solid #005a8f;
+    box-shadow: 0 0 0 3px rgba(0, 90, 143, 0.2);
 }
 
 input[type="checkbox"] {

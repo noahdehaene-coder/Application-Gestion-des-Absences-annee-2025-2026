@@ -141,7 +141,7 @@ async function deleteStudent() {
 
     try {
         await deleteStudentById(studentId);
-        alert("Étudiant supprimé avec succès.");
+        alert("Étudiant·e supprimé·e avec succès.");
         router.push({ name: 'SelectStudentModification' });
     } catch (error) {
         console.error(error);

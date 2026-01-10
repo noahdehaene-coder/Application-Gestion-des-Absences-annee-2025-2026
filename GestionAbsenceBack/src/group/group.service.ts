@@ -15,7 +15,11 @@ export class GroupService {
   }
 
   async getAll(): Promise<group[]> {
-    return this.prisma.group.findMany();
+    return this.prisma.group.findMany({
+      include: {
+        group_semester: true
+      }
+    });
   }
 
   async getByStudentId(studentId: number) {

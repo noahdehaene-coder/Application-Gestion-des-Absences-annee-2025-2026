@@ -1,9 +1,9 @@
 <template>
   <main class="left admin-container">
-    <h1>Gérer les Professeurs</h1>
+    <h1>Gérer les Professeur·e·s</h1>
     
     <section class="form-section">
-      <h2>Créer un nouveau professeur</h2>
+      <h2>Créer un·e nouveau·elle professeur·e</h2>
       <form @submit.prevent="handleCreateProfessor" class="create-form">
         <div class="form-group">
           <label for="prof-name">Nom complet</label>

@@ -17,7 +17,19 @@
 
       <div class="form-group">
         <label for="group-select">2. Groupe</label>
+        
+        <!-- Menu hiérarchique pour TD/TP -->
+        <HierarchicalGroupSelector
+          v-if="!isCM && selectedSessionTypeGlobalId"
+          v-model="selectedGroupId"
+          :groups="filteredGroups"
+          :disabled="!selectedSessionTypeGlobalId"
+          :placeholder="selectedSessionTypeGlobalId ? '-- Choisir un groupe --' : '-- Veuillez d\'abord choisir un type de session --'"
+        />
+        
+        <!-- Select simple pour CM ou si pas de type sélectionné -->
         <select 
+          v-else
           id="group-select" 
           v-model="selectedGroupId" 
           required
@@ -30,6 +42,7 @@
             {{ group.name }}
           </option>
         </select>
+        
         <small v-if="isCM" class="text-info">
           Pour un CM, seules les promotions entières (ex: L1S1) sont proposées.
         </small>
@@ -90,6 +103,7 @@ import { useRouter } from 'vue-router';
 import { getGroups } from '../shared/fetchers/groups';
 import { getGlobalSessionTypes } from '../shared/fetchers/session_type';
 import { getCourseMaterials } from '../shared/fetchers/course_material';
+import HierarchicalGroupSelector from '../shared/components/HierarchicalGroupSelector.vue';
 
 const router = useRouter();
 
@@ -104,8 +118,37 @@ const selectedCourseId = ref(null);
 const selectedSessionTypeGlobalId = ref(null);
 const selectedDate = ref(new Date().toISOString().split('T')[0]);
 
-const selectedStartTime = ref("08:00");
-const selectedEndTime = ref("10:00");
+// Fonction pour arrondir l'heure au quart d'heure le plus proche
+function getRoundedTimeDefaults() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  
+  // Arrondir au quart d'heure le plus proche (0, 15, 30, 45)
+  let roundedMinutes;
+  if (minutes < 8) roundedMinutes = 0;
+  else if (minutes < 23) roundedMinutes = 15;
+  else if (minutes < 38) roundedMinutes = 30;
+  else if (minutes < 53) roundedMinutes = 45;
+  else {
+    roundedMinutes = 0;
+    now.setHours(now.getHours() + 1);
+  }
+  
+  now.setMinutes(roundedMinutes);
+  now.setSeconds(0);
+  
+  const startTime = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  // Ajouter 1h30 (90 minutes)
+  now.setMinutes(now.getMinutes() + 90);
+  const endTime = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  return { startTime, endTime };
+}
+
+const timeDefaults = getRoundedTimeDefaults();
+const selectedStartTime = ref(timeDefaults.startTime);
+const selectedEndTime = ref(timeDefaults.endTime);
 
 // Clé de stockage
 const STORAGE_KEY = 'prof_preferred_subjects';
@@ -152,11 +195,15 @@ const isCM = computed(() => {
 
 const filteredGroups = computed(() => {
   if (!groups.value) return [];
+  let filtered;
   if (isCM.value) {
     // Regex pour L1S1, M2S3 etc.
-    return groups.value.filter(g => /^[LM]\d+S\d+$/i.test(g.name));
+    filtered = groups.value.filter(g => /^[LM]\d+S\d+$/i.test(g.name));
+  } else {
+    filtered = groups.value;
   }
-  return groups.value;
+  // Tri alphabétique par nom de groupe
+  return filtered.sort((a, b) => a.name.localeCompare(b.name));
 });
 
 /**

@@ -145,4 +145,24 @@ function handleLogout() {
   outline: 2px solid #254e70ff;
   outline-offset: 2px;
 }
+
+@media (max-width: 900px) {
+  .navigation-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .logout-button {
+    align-self: flex-end;
+  }
+  
+}
+
+@media (max-width: 625px) {
+  .navigation-router-link {
+    flex-direction: column;
+    width: 100%;
+  }
+}
 </style>

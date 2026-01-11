@@ -215,6 +215,7 @@ async function exportAbsL3() {
 
 .buttons-container {
   display: flex;
+  align-items: center;
   justify-content: flex-start;
   gap: 1rem;
   margin: 2rem 0 3rem 0;
@@ -474,7 +475,7 @@ main > h1 {
 .search-icon {
   position: absolute;
   left: 0.8rem;
-  top: 50%;
+  top: 33%;
   transform: translateY(-50%);
   width: 1.2rem;
   height: 1.2rem;

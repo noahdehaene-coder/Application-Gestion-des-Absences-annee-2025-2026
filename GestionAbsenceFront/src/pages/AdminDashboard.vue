@@ -1,6 +1,6 @@
 <template>
   <main class="left admin-container">
-    <h1>Panneau d'Administration</h1>
+    <h1>Panneau Gestion</h1>
     <p>Bienvenue, Gestionnaire. Sélectionnez une section à gérer.</p>
     
     <nav class="admin-nav">
@@ -64,5 +64,11 @@
 .admin-nav a.router-link-active {
   background-color: var(--color-1, #005a8f);
   color: white;
+}
+
+@media (max-width: 335px) {
+  .h1 {
+    flex-wrap: wrap;
+  }
 }
 </style>

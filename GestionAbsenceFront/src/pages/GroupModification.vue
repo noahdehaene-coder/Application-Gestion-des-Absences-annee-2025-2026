@@ -180,18 +180,22 @@ async function loadRightList() {
 
 
 const filteredStudentsInGroup = computed(() => {
-  return studentsInGroup.value.filter(s => 
-    s.name.toLowerCase().includes(searchQuery1.value.toLowerCase())
-  );
+  return studentsInGroup.value
+    .filter(s => 
+      s.name.toLowerCase().includes(searchQuery1.value.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const filteredStudentsInOtherGroups = computed(() => {
   const currentMemberIds = new Set(studentsInGroup.value.map(s => s.id));
 
-  return studentsInRightList.value.filter(s => {
-    if (currentMemberIds.has(s.id)) return false;
-    return s.name.toLowerCase().includes(searchQuery2.value.toLowerCase());
-  });
+  return studentsInRightList.value
+    .filter(s => {
+      if (currentMemberIds.has(s.id)) return false;
+      return s.name.toLowerCase().includes(searchQuery2.value.toLowerCase());
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 });
 
 

@@ -1,5 +1,49 @@
 <template>
-  <main class="left" v-if="group && semester">
+  <!-- Mode CRÉATION -->
+  <main class="left" v-if="isCreating">
+    <div class="header-creation">
+      <h1>Créer un nouveau groupe</h1>
+    </div>
+
+    <div class="creation-form">
+      <div class="form-group">
+        <label for="group-name">Nom du groupe</label>
+        <input 
+          id="group-name" 
+          v-model="newGroupName" 
+          type="text" 
+          placeholder="Ex: TD1, TP A, Groupe 1, etc."
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="semester-select">Semestre</label>
+        <select 
+          id="semester-select" 
+          v-model="newGroupSemesterId" 
+          class="form-select"
+        >
+          <option :value="null" disabled>-- Sélectionner un semestre --</option>
+          <option v-for="sem in allSemesters" :key="sem.id" :value="sem.id">
+            {{ sem.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button @click="cancelCreate" class="button secondary-btn">
+          Annuler
+        </button>
+        <button @click="createNewGroup" class="button primary-btn" :disabled="!newGroupName || !newGroupSemesterId">
+          Créer le groupe
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mode MODIFICATION -->
+  <main class="left" v-else-if="group && semester">
     <div class="header-with-delete">
       <h1>Modification du groupe {{ group.name }}</h1>
       <button @click="deleteGroup" class="button delete-group-btn" title="Supprimer ce groupe">
@@ -100,14 +144,20 @@ import SearchIcon from '@/shared/assets/icon/SearchIcon.vue';
 import { getGroupById, getAllGroupsBySemester, getGroups, deleteGroupById } from '../shared/fetchers/groups';
 import { getStudentsByGroupId, getStudents } from '../shared/fetchers/students';
 import { getSemesterById } from '../shared/fetchers/semesters';
+import { getAllSemesters } from '../shared/fetchers/semesters';
 import { postInscription, deleteInscriptionById, putInscriptionAndDeleteOldInscription, getInscriptions } from '../shared/fetchers/inscriptions';
+import { postGroupWithSemesterName } from '../shared/fetchers/groups';
 
 const route = useRoute();
 const router = useRouter();
 const currentGroupId = route.params.id;
+const isCreating = ref(currentGroupId === '0');
 
 const group = ref(null);
 const semester = ref(null);
+const allSemesters = ref([]);
+const newGroupName = ref('');
+const newGroupSemesterId = ref(null);
 const studentsInGroup = ref([]);
 
 const sourceGroups = ref([]);
@@ -122,7 +172,13 @@ const searchQuery2 = ref('');
 const excludedGroups = ['L1S1', 'L1S2', 'L2S3', 'L2S4', 'L3S5', 'L3S6'];
 
 onMounted(async () => {
-  await loadMainData();
+  if (isCreating.value) {
+    // Mode création : charger tous les semestres
+    allSemesters.value = await getAllSemesters();
+  } else {
+    // Mode modification
+    await loadMainData();
+  }
 });
 
 async function loadMainData() {
@@ -234,6 +290,37 @@ async function deleteStudent(student) {
   }
 }
 
+async function createNewGroup() {
+  if (!newGroupName.value || !newGroupSemesterId.value) {
+    alert("Veuillez remplir tous les champs");
+    return;
+  }
+
+  try {
+    // Trouver le nom du semestre sélectionné
+    const selectedSemester = allSemesters.value.find(s => s.id === parseInt(newGroupSemesterId.value));
+    if (!selectedSemester) {
+      alert("Semestre invalide");
+      return;
+    }
+
+    // Créer le groupe
+    const newGroup = await postGroupWithSemesterName(selectedSemester.name, newGroupName.value);
+    
+    if (newGroup) {
+      alert(`Le groupe "${newGroupName.value}" a été créé avec succès !`);
+      router.push({ name: 'SelectGroupModification' });
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Erreur lors de la création du groupe.");
+  }
+}
+
+function cancelCreate() {
+  router.push({ name: 'SelectGroupModification' });
+}
+
 async function addStudent(student, isMove) {
   let msg = isMove 
     ? `DÉPLACER ${student.name} de ${student.originalGroupName} vers ${group.value.name} ?`
@@ -273,6 +360,86 @@ async function deleteGroup() {
 <style scoped>
 @import url("../shared/shared.css");
 
+/* ===== Styles CRÉATION ===== */
+.header-creation {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.header-creation h1 {
+  margin: 0;
+  color: var(--color-1);
+}
+
+.creation-form {
+  max-width: 600px;
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.form-input,
+.form-select {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-1);
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.secondary-btn {
+  background-color: #6c757d;
+  color: white;
+  flex: 1;
+}
+
+.secondary-btn:hover {
+  background-color: #5a6268;
+}
+
+.primary-btn {
+  background-color: var(--color-1);
+  color: white;
+  flex: 1;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Styles MODIFICATION ===== */
 .header-with-delete {
   display: flex;
   justify-content: space-between;
@@ -339,6 +506,11 @@ async function deleteGroup() {
 
 .list {
   width: 80%;
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem;
 }
 
 .student-list-container {

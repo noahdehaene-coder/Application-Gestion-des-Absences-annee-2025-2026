@@ -209,9 +209,19 @@ onMounted(async () => {
         ...call,
         inputStart: call.start_time ? getTimeFromIso(call.start_time) : defaults.startTime,
         inputEnd: call.end_time ? getTimeFromIso(call.end_time) : defaults.endTime
-      }));
+      })).sort((a, b) => {
+        // Tri chronologique par heure de début
+        const timeA = a.start_time ? new Date(a.start_time).getTime() : 0;
+        const timeB = b.start_time ? new Date(b.start_time).getTime() : 0;
+        return timeA - timeB;
+      });
 
-      todayCalls.value = rawTodaySlots || [];
+      todayCalls.value = (rawTodaySlots || []).sort((a, b) => {
+        // Tri chronologique par heure de début
+        const timeA = a.start_time ? new Date(a.start_time).getTime() : 0;
+        const timeB = b.start_time ? new Date(b.start_time).getTime() : 0;
+        return timeA - timeB;
+      });
       
       // Récupérer les matières configurées du professeur depuis la BDD
       const preferredSubjectIds = await getMyPreferences();

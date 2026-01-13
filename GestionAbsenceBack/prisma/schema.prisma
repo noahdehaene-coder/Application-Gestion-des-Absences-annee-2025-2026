@@ -20,6 +20,7 @@ model User {
   name     String
   role     UserRole
   slots    slot[]
+  professorPreferences ProfessorPreference[]
 
   studentId Int?     @unique
   student   student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -73,6 +74,7 @@ model course_material {
   semester_id                  Int
   course_material_semester     semester       @relation(fields: [semester_id], references: [id], onDelete: Cascade)
   course_material_session_type session_type[]
+  professorPreferences         ProfessorPreference[]
 }
 
 model session_type {
@@ -121,6 +123,16 @@ model slot {
   // Mettre à jour la contrainte d'unicité
   @@unique([date, session_type_id, group_id, professorId])
   // ++++++++++++++++++++++++++++++++++++++++
+}
+
+model ProfessorPreference {
+  id              Int      @id @default(autoincrement())
+  professorId     Int
+  courseMaterialId Int
+  professor       User     @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  courseMaterial  course_material @relation(fields: [courseMaterialId], references: [id], onDelete: Cascade)
+
+  @@unique([professorId, courseMaterialId])
 }
 
 

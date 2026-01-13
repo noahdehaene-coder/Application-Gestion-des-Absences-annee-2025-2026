@@ -37,8 +37,8 @@
         <router-link :to="{ name: 'ProfessorDashboard' }" class="button secondary-button">
           Annuler
         </router-link>
-        <button type="submit" class="button primary-button">
-          Enregistrer mes choix
+        <button type="submit" class="button primary-button" :disabled="saving">
+          {{ saving ? 'Enregistrement...' : 'Enregistrer mes choix' }}
         </button>
       </div>
     </form>
@@ -51,16 +51,15 @@ import { useRouter } from 'vue-router';
 // Assure-toi que ces chemins correspondent à ton arborescence
 import { getCourseMaterials } from '../shared/fetchers/course_material';
 import { getAllSemesters } from '../shared/fetchers/semesters';
+import { getMyPreferences, saveMyPreferences } from '../shared/fetchers/preferences';
 
 const router = useRouter();
 const loading = ref(true);
+const saving = ref(false);
 
 const semesters = ref([]);
 const allSubjects = ref([]);
-const selectedSubjectIds = ref([]); 
-
-// Clé unique pour sauvegarder dans le navigateur
-const STORAGE_KEY = 'prof_preferred_subjects';
+const selectedSubjectIds = ref([]);
 
 onMounted(async () => {
   try {
@@ -73,14 +72,9 @@ onMounted(async () => {
     semesters.value = fetchedSemesters;
     allSubjects.value = fetchedSubjects;
 
-    // 2. Chargement des préférences existantes
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      selectedSubjectIds.value = JSON.parse(saved);
-    } else {
-      // Optionnel : Si rien n'est coché, on peut tout cocher par défaut
-      // selectedSubjectIds.value = allSubjects.value.map(s => s.id);
-    }
+    // 2. Chargement des préférences depuis la BDD
+    const preferences = await getMyPreferences();
+    selectedSubjectIds.value = preferences;
   } catch (e) {
     console.error("Erreur de chargement", e);
   } finally {
@@ -93,13 +87,21 @@ function getSubjectsForSemester(semesterId) {
   return allSubjects.value.filter(s => s.semester_id === semesterId);
 }
 
-// Sauvegarde dans le navigateur et retour au dashboard
-function savePreferences() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedSubjectIds.value));
-  // Petit délai pour l'UX
-  setTimeout(() => {
-    router.push({ name: 'ProfessorDashboard' });
-  }, 200);
+// Sauvegarde dans la BDD et retour au dashboard
+async function savePreferences() {
+  try {
+    saving.value = true;
+    await saveMyPreferences(selectedSubjectIds.value);
+    // Petit délai pour l'UX
+    setTimeout(() => {
+      router.push({ name: 'ProfessorDashboard' });
+    }, 200);
+  } catch (error) {
+    console.error("Erreur sauvegarde:", error);
+    alert('Erreur lors de la sauvegarde des préférences');
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 

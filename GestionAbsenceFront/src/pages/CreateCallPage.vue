@@ -103,6 +103,7 @@ import { useRouter } from 'vue-router';
 import { getGroups } from '../shared/fetchers/groups';
 import { getGlobalSessionTypes } from '../shared/fetchers/session_type';
 import { getCourseMaterials } from '../shared/fetchers/course_material';
+import { getMyPreferences } from '../shared/fetchers/preferences';
 import HierarchicalGroupSelector from '../shared/components/HierarchicalGroupSelector.vue';
 
 const router = useRouter();
@@ -150,9 +151,6 @@ const timeDefaults = getRoundedTimeDefaults();
 const selectedStartTime = ref(timeDefaults.startTime);
 const selectedEndTime = ref(timeDefaults.endTime);
 
-// Clé de stockage
-const STORAGE_KEY = 'prof_preferred_subjects';
-
 /**
  * LOGIQUE 1 : Chargement et Application des Préférences
  */
@@ -166,20 +164,14 @@ onMounted(async () => {
     getCourseMaterials()
   ]);
 
-  // 2. Filtrer selon les préférences du prof
-  const savedPreferences = localStorage.getItem(STORAGE_KEY);
-  if (savedPreferences) {
-    const preferredIds = JSON.parse(savedPreferences);
-    
-    // Si la liste des favoris n'est pas vide, on filtre
-    if (preferredIds.length > 0) {
-      allSubjects.value = rawSubjects.filter(subj => preferredIds.includes(subj.id));
-    } else {
-      // Si la liste est vide (l'utilisateur a tout décoché), on montre tout par sécurité
-      allSubjects.value = rawSubjects;
-    }
+  // 2. Filtrer selon les préférences du prof (depuis la BDD)
+  const preferredIds = await getMyPreferences();
+  
+  // Si la liste des favoris n'est pas vide, on filtre
+  if (preferredIds.length > 0) {
+    allSubjects.value = rawSubjects.filter(subj => preferredIds.includes(subj.id));
   } else {
-    // Si pas de config, on montre tout
+    // Si la liste est vide (l'utilisateur a tout décoché), on montre tout par sécurité
     allSubjects.value = rawSubjects;
   }
 });

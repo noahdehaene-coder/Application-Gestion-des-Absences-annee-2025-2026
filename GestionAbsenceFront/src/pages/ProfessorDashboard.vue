@@ -119,7 +119,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { getUser } from '@/shared/fetchers/user';
-import { fetchRecentCalls, fetchSlotsByDate, fetchWeekSlots } from '@/shared/fetchers/slots'; 
+import { fetchRecentCalls, fetchSlotsByDate, fetchWeekSlots } from '@/shared/fetchers/slots';
+import { getMyPreferences } from '@/shared/fetchers/preferences'; 
 
 const router = useRouter();
 const professorName = ref("");
@@ -128,7 +129,6 @@ const todayCalls = ref([]);
 const weekSlots = ref([]);
 const isLoading = ref(true);
 const currentUserId = ref(null);
-const STORAGE_KEY = 'prof_preferred_subjects'; // Clé pour récupérer les matières configurées
 
 /**
  * Arrondit l'heure actuelle au quart d'heure le plus proche
@@ -213,9 +213,8 @@ onMounted(async () => {
 
       todayCalls.value = rawTodaySlots || [];
       
-      // Récupérer les matières configurées du professeur
-      const savedPreferences = localStorage.getItem(STORAGE_KEY);
-      const preferredSubjectIds = savedPreferences ? JSON.parse(savedPreferences) : [];
+      // Récupérer les matières configurées du professeur depuis la BDD
+      const preferredSubjectIds = await getMyPreferences();
       
       // Filtrer les appels de la semaine :
       // 1. Exclure ceux du professeur connecté

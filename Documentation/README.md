@@ -6,3 +6,5 @@ Ce fichier contient :
 - Le schéma de la base de données : Pour le visualiser, ouvrez le fichier sur vsCode, installez les extensions "Markdown Preview Mermaid Support" et "Markdown Preview Enhanced", placez vous sur votre fichier schéma_base_de_données.md et cliquez sur "open preview to the side", bouton situer en haut à droite de la page vsCode.
 
 - Tableau des endpoints.xlsx contient le détail des méthodes des Tables.
+
+- Le doc de déploiement pdf sert éventuellement à déployer l'application sur un serveur (ce document a été générer par IA générative par manque de temps, il peut ne pas être fiable).
